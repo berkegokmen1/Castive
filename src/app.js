@@ -1,13 +1,16 @@
+require('dotenv').config();
+
 const express = require('express');
 const mongoose = require('mongoose');
 const morgan = require('morgan');
-const dotenv = require('dotenv').config();
 const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
 // const https = require('https');
 
 // Route imports
+const authRoutes = require('./routes/auth.routes');
+const usersRoutes = require('./routes/users.routes');
 
 const app = express();
 // const server = https.createServer({}, app);
@@ -27,19 +30,31 @@ app.use(
   })
 );
 
-// Middlewares
-app.use((error, req, res, next) => {
-  const { statusCode: status, data } = error;
-
-  console.error(error.stack);
-
-  res.status(status).json({
-    success: false,
-    data,
+app.get('/', (_, res) => {
+  res.json({
+    data: {
+      message: 'Hi from /',
+    },
+    success: true,
   });
 });
 
 // Route registers
+app.use('/auth', authRoutes);
+app.use('/users', usersRoutes);
+
+// Middlewares
+app.use((error, req, res, next) => {
+  const { statusCode, message, whatEver } = error;
+
+  console.log(whatEver);
+  return res.status(statusCode).json({
+    success: false,
+    data: {
+      message,
+    },
+  });
+});
 
 // DB Connection and server initializing
 mongoose

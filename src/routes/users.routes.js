@@ -17,7 +17,7 @@ const upload = multer({
   },
 });
 
-const {} = require('../controllers/user.controllers');
+const {} = require('../controllers/users.controllers');
 
 // Routes
 router.get('/me');

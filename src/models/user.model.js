@@ -10,6 +10,8 @@ const userSchema = new mongoose.Schema(
       trim: true,
       unique: true,
       lowercase: true,
+      minlength: 2,
+      maxlength: 16,
     },
     age: {
       type: Number,
@@ -26,26 +28,39 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
-      minlength: 7,
-    },
-    accessTokens: [
-      {
-        token: {
-          type: String,
-          required: true,
-        },
-      },
-    ],
-    refreshToken: {
-      type: String,
-      required: true,
+      minlength: 6,
+      maxlength: 16,
     },
     avatar: {
       type: Buffer,
     },
+    accessTokens: {
+      type: [String],
+      required: true,
+      default: [],
+    },
+    refreshTokens: {
+      type: [String],
+      required: true,
+      default: [],
+    },
+    subscription: {
+      status: {
+        type: String,
+        required: true,
+        default: 'none',
+        enum: ['active', 'trialing', 'overdue', 'canceled', 'none'],
+      },
+      endsIn: {
+        type: Date,
+        required: true,
+        default: Date.now(),
+      },
+    },
   },
   {
     timestamps: true,
+    versionKey: false,
   }
 );
 
@@ -54,7 +69,8 @@ userSchema.methods.toJSON = function () {
   const userObject = user.toObject();
 
   delete userObject.password;
-  delete userObject.tokens;
+  delete userObject.accessTokens;
+  delete userObject.refreshToken;
   delete userObject.avatar;
   return userObject;
 };
