@@ -1,92 +1,164 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-const jtw = require('jsonwebtoken');
+const jwt = require('jsonwebtoken');
 
 const userSchema = new mongoose.Schema(
-  {
-    username: {
-      type: String,
-      required: true,
-      trim: true,
-      unique: true,
-      lowercase: true,
-      minlength: 2,
-      maxlength: 16,
-    },
-    age: {
-      type: Number,
-      default: 0,
-    },
-    email: {
-      type: String,
-      required: true,
-      trim: true,
-      unique: true,
-      lowercase: true,
-    },
-    password: {
-      type: String,
-      required: true,
-      trim: true,
-      minlength: 6,
-      maxlength: 16,
-    },
-    avatar: {
-      type: Buffer,
-    },
-    accessTokens: {
-      type: [String],
-      required: true,
-      default: [],
-    },
-    refreshTokens: {
-      type: [String],
-      required: true,
-      default: [],
-    },
-    subscription: {
-      status: {
-        type: String,
-        required: true,
-        default: 'none',
-        enum: ['active', 'trialing', 'overdue', 'canceled', 'none'],
-      },
-      endsIn: {
-        type: Date,
-        required: true,
-        default: Date.now(),
-      },
-    },
-  },
-  {
-    timestamps: true,
-    versionKey: false,
-  }
+	{
+		username: {
+			type: String,
+			required: true,
+			trim: true,
+			unique: true,
+			lowercase: true,
+			minlength: 2,
+			maxlength: 16,
+		},
+		age: {
+			type: Number,
+			default: 0,
+		},
+		email: {
+			value: {
+				type: String,
+				required: true,
+				trim: true,
+				unique: true,
+				lowercase: true,
+			},
+			verified: {
+				type: Boolean,
+				required: true,
+				default: false,
+			},
+		},
+		phoneNumber: {
+			value: {
+				type: String,
+				required: false,
+				trim: true,
+				unique: true,
+			},
+			verified: {
+				type: Boolean,
+				required: false,
+				default: false,
+			},
+		},
+		password: {
+			type: String,
+			required: true,
+			trim: true,
+			minlength: 6,
+		},
+		avatar: {
+			type: Buffer,
+			default: undefined,
+		},
+		accessTokens: {
+			type: [String],
+			required: true,
+			default: [],
+		},
+		refreshTokens: {
+			type: [String],
+			required: true,
+			default: [],
+		},
+		subscription: {
+			status: {
+				type: String,
+				required: true,
+				default: 'none',
+				enum: ['active', 'trialing', 'overdue', 'canceled', 'none'],
+			},
+			endsIn: {
+				type: Date,
+				required: true,
+				default: Date.now(),
+			},
+		},
+	},
+	{
+		timestamps: true,
+		versionKey: false,
+	}
 );
 
-userSchema.methods.toJSON = function () {
-  const user = this;
-  const userObject = user.toObject();
+userSchema.static('findByCredentials', async (username, email, password) => {
+	let user;
+	try {
+		if (username) {
+			user = await User.findOne({ username }).exec();
+		} else if (email) {
+			user = await User.findOne({ 'email.value': email }).exec();
+		}
 
-  delete userObject.password;
-  delete userObject.accessTokens;
-  delete userObject.refreshToken;
-  delete userObject.avatar;
-  return userObject;
-};
+		if (!user) {
+			const error = new Error('User not found.');
+			error.statusCode = 400;
+			throw error;
+		}
 
-userSchema.pre('save', async function (next) {
-  const user = this;
-  if (user.isModified('password')) {
-    user.password = await bcrypt.hash(user.password, 8);
-  }
-  next();
+		const passCheck = await bcrypt.compare(password, user.password);
+
+		if (!passCheck) {
+			const error = new Error('Invalid credentials.');
+			error.statusCode = 403;
+			throw error;
+		}
+
+		return user;
+	} catch (error) {
+		throw new Error(error);
+	}
 });
 
-userSchema.pre('remove', async function (req, res, next) {
-  const user = this;
-  // Remove playlists
-  next();
+userSchema.method('generateTokenPair', async function () {
+	try {
+		const user = this;
+		const accessToken = jwt.sign(
+			{ _id: user._id, email: user.email.value },
+			process.env.JWT_ACCESS_SECRET,
+			{ expiresIn: '5m' }
+		);
+
+		const refreshToken = jwt.sign(
+			{ accessToken },
+			process.env.JWT_REFRESH_SECRET,
+			{ expiresIn: '90 days' }
+		);
+
+		user.accessTokens = user.accessTokens.concat(accessToken);
+		user.refreshTokens = user.refreshTokens.concat(refreshToken);
+
+		await user.save();
+
+		return { accessToken, refreshToken };
+	} catch (error) {
+		throw new Error(error);
+	}
+});
+
+userSchema.pre('save', async function (next) {
+	try {
+		const user = this;
+		if (user.isModified('password')) {
+			user.password = await bcrypt.hash(user.password, 12);
+		}
+		next();
+	} catch (error) {
+		throw new Error(error);
+	}
+});
+
+userSchema.pre('remove', async function (next) {
+	try {
+	} catch (error) {
+		throw new Error(error);
+	}
+	const user = this;
+	// Remove playlists
+	next();
 });
 
 const User = mongoose.model('User', userSchema);

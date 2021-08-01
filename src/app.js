@@ -22,53 +22,52 @@ app.use(helmet());
 app.use(cors());
 app.use(morgan('dev'));
 app.use(
-  compression({
-    filter: (req, res) => {
-      if (req.headers['x-no-compression']) return false;
-      return compression.filter(req, res);
-    },
-  })
+	compression({
+		filter: (req, res) => {
+			if (req.headers['x-no-compression']) return false;
+			return compression.filter(req, res);
+		},
+	})
 );
 
 app.get('/', (_, res) => {
-  res.json({
-    data: {
-      message: 'Hi from /',
-    },
-    success: true,
-  });
+	res.json({
+		Data: {
+			message: 'Hi from /',
+		},
+		success: true,
+	});
 });
 
 // Route registers
 app.use('/auth', authRoutes);
 app.use('/users', usersRoutes);
 
-// Middlewares
+// Error handlers
 app.use((error, req, res, next) => {
-  const { statusCode, message, whatEver } = error;
+	const { statusCode, message } = error;
 
-  console.log(whatEver);
-  return res.status(statusCode).json({
-    success: false,
-    data: {
-      message,
-    },
-  });
+	return res.status(statusCode || 500).json({
+		success: false,
+		Data: {
+			message,
+		},
+	});
 });
 
 // DB Connection and server initializing
 mongoose
-  .connect(process.env.MONGODB_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-    useFindAndModify: false,
-    useCreateIndex: true,
-  })
-  .then((_) => {
-    app.listen(process.env.PORT || 4000, (_) => {
-      console.log('Server is up and running on port', process.env.PORT);
-    });
-  })
-  .catch((err) => {
-    console.error(err);
-  });
+	.connect(process.env.MONGODB_URI, {
+		useNewUrlParser: true,
+		useUnifiedTopology: true,
+		useFindAndModify: false,
+		useCreateIndex: true,
+	})
+	.then((_) => {
+		app.listen(process.env.PORT || 4000, (_) => {
+			console.log('Server is up and running on port', process.env.PORT);
+		});
+	})
+	.catch((err) => {
+		console.error(err);
+	});

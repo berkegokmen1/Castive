@@ -2,43 +2,49 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/user.model');
 
 const auth = async (req, res, next) => {
-  try {
-    const tokenHeader = req.header('Authorization');
-    const token = tokenHeader.split(' ')[1]; //Access token
+	try {
+		let user;
 
-    jwt.verify(token, process.env.JWT_ACCESS_SECRET, async (err, decoded) => {
-      const user = await User.findOne({
-        _id: decoded._id,
-        accessTokens: {
-          $in: [token],
-        },
-      }).exec();
+		const accessTokenHeader = req.header('Authorization');
+		const accessToken = accessTokenHeader.split(' ')[1]; // Access token
 
-      // if (!user) {
-      //   req.user = user;
-      //   req.token = token;
-      //   next();
-      // } else if (err.message === 'jwt expired') {
-      //   return res.json({
-      //     success: false,
-      //     data: {
-      //       message: 'Access token expired',
-      //     },
-      //   });
-      // } else {
-      //   console.log(err);
-      //   return res.json({
-      //     success: false,
-      //     data: {
-      //       error: err,
-      //       message: 'User is not authenticated.',
-      //     },
-      //   });
-      // }
-    });
-  } catch (error) {
-    next(error);
-  }
+		jwt.verify(
+			accessToken,
+			process.env.JWT_ACCESS_SECRET,
+			async (err, decoded) => {
+				if (err) {
+					const error = new Error(err.message);
+					if (err.name === 'JsonWebTokenError') {
+						error.statusCode = 401; // Unauthorized
+					} else if (err.name === 'TokenExpiredError') {
+						error.statusCode = 400; // Bad request
+					}
+
+					return next(error);
+				}
+
+				user = await User.findOne({
+					_id: decoded._id,
+					accessTokens: {
+						$in: [accessToken],
+					},
+				}).exec();
+
+				if (!user) {
+					const error = new Error('Not authenticated.');
+					error.statusCode = 401; // Unauthorized
+					return next(error);
+				}
+
+				req.user = user;
+				req.accessToken = accessToken;
+
+				return next();
+			}
+		);
+	} catch (error) {
+		next(error);
+	}
 };
 
 module.exports = auth;
