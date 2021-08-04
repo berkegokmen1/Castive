@@ -1,10 +1,6 @@
-// Test comment
-// This is with redis
-
 require('dotenv').config();
 
 const express = require('express');
-const mongoose = require('mongoose');
 const morgan = require('morgan');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -14,6 +10,10 @@ const compression = require('compression');
 // Route imports
 const authRoutes = require('./routes/auth.routes');
 const usersRoutes = require('./routes/users.routes');
+
+// DB initializers imports
+const connectMongoose = require('./db/mongoose.db');
+const connectRedis = require('./db/redis.db');
 
 const app = express();
 // const server = https.createServer({}, app);
@@ -48,29 +48,23 @@ app.use('/users', usersRoutes);
 
 // Error handlers
 app.use((error, req, res, next) => {
-	const { statusCode, message } = error;
-
-	return res.status(statusCode || 500).json({
+	return res.status(err.statusCode || 500).json({
 		success: false,
 		Data: {
-			message,
+			error: err.message,
 		},
 	});
 });
 
-// DB Connection and server initializing
-mongoose
-	.connect(process.env.MONGODB_URI, {
-		useNewUrlParser: true,
-		useUnifiedTopology: true,
-		useFindAndModify: false,
-		useCreateIndex: true,
-	})
+// DB Connections and server initializing
+
+Promise.all([connectMongoose(), connectRedis()])
 	.then((_) => {
 		app.listen(process.env.PORT || 4000, (_) => {
-			console.log('Server is up and running on port', process.env.PORT);
+			console.log('Server is up and running on port', process.env.PORT || 4000);
 		});
 	})
 	.catch((err) => {
-		console.error(err);
+		console.log(err);
+		process.exit();
 	});
