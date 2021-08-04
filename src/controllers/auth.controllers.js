@@ -7,14 +7,8 @@ const { registerValidation } = require('../util/formValidation');
 
 const putRegister = async (req, res, next) => {
 	try {
-		const { username, age, email, password, password2 } = req.body;
-		const validationErrors = registerValidation(
-			username,
-			age,
-			email,
-			password,
-			password2
-		);
+		const { username, age, email, password } = req.body;
+		const validationErrors = registerValidation(username, age, email, password);
 
 		if (validationErrors.length > 0) {
 			return res.status(400).json({
@@ -173,6 +167,7 @@ const postRefresh = (req, res, next) => {
 		next(error);
 	}
 };
+
 const postLogout = async (req, res, next) => {
 	try {
 		const user = req.user;
@@ -180,6 +175,26 @@ const postLogout = async (req, res, next) => {
 
 		const refreshTokenHeader = req.header('X-Refresh-Token');
 		const refreshToken = refreshTokenHeader.split(' ')[1];
+
+		// Security check
+		jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET, (err, decoded) => {
+			if (err) {
+				const error = new Error(err.message);
+				if (err.name === 'JsonWebTokenError') {
+					error.statusCode = 401; // Unauthorized
+				} else if (err.name === 'TokenExpiredError') {
+					// Refresh token expired, need to log in again
+					error.statusCode = 400; // Bad request
+				}
+
+				next(error);
+			}
+
+			// Remove token
+			user.accessTokens = user.accessTokens.filter(
+				(t) => t !== decoded.accessToken
+			);
+		});
 
 		// Remove tokens
 		user.refreshTokens = user.refreshTokens.filter((t) => t !== refreshToken);
@@ -197,6 +212,7 @@ const postLogout = async (req, res, next) => {
 		next(error);
 	}
 };
+
 const postLogoutAll = async (req, res, next) => {
 	try {
 		const user = req.user;

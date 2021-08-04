@@ -119,7 +119,7 @@ userSchema.method('generateTokenPair', async function () {
 		const accessToken = jwt.sign(
 			{ _id: user._id, email: user.email.value },
 			process.env.JWT_ACCESS_SECRET,
-			{ expiresIn: '5m' }
+			{ expiresIn: '1m' }
 		);
 
 		const refreshToken = jwt.sign(

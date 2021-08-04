@@ -29,14 +29,10 @@ const registerValidation = (username, age, email, password, password2) => {
 		}
 	}
 
-	if (password === '' || password2 === '') {
+	if (password === '') {
 		errors.push('Passwords cannot be blank.');
 	} else {
-		if (password !== password2) {
-			errors.push("Passwords don't match.");
-		}
-
-		if (password.includes(username) || password2.includes(username)) {
+		if (password.includes(username)) {
 			errors.push('Password cannot contain username.');
 		}
 
@@ -48,7 +44,7 @@ const registerValidation = (username, age, email, password, password2) => {
 			errors.push('Password length must be less than 25 characters long.');
 		}
 
-		if (/\s/.test(password) || /\s/.test(password2)) {
+		if (/\s/.test(password)) {
 			errors.push('Password cannot contain any whitespaces.');
 		}
 
