@@ -9,9 +9,9 @@ const connectMongoose = () => {
 				useFindAndModify: false,
 				useCreateIndex: true,
 			})
-			.then((_) => {
+			.then((result) => {
 				console.log('Mongoose connected.');
-				resolve();
+				resolve(result);
 			})
 			.catch((err) => {
 				reject(err);

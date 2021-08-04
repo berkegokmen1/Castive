@@ -54,16 +54,6 @@ const userSchema = new mongoose.Schema(
 			type: Buffer,
 			default: undefined,
 		},
-		accessTokens: {
-			type: [String],
-			required: true,
-			default: [],
-		},
-		refreshTokens: {
-			type: [String],
-			required: true,
-			default: [],
-		},
 		subscription: {
 			status: {
 				type: String,
@@ -116,6 +106,7 @@ userSchema.static('findByCredentials', async (username, email, password) => {
 userSchema.method('generateTokenPair', async function () {
 	try {
 		const user = this;
+
 		const accessToken = jwt.sign(
 			{ _id: user._id, email: user.email.value },
 			process.env.JWT_ACCESS_SECRET,
@@ -127,11 +118,6 @@ userSchema.method('generateTokenPair', async function () {
 			process.env.JWT_REFRESH_SECRET,
 			{ expiresIn: '90 days' }
 		);
-
-		user.accessTokens = user.accessTokens.concat(accessToken);
-		user.refreshTokens = user.refreshTokens.concat(refreshToken);
-
-		await user.save();
 
 		return { accessToken, refreshToken };
 	} catch (error) {

@@ -12,7 +12,17 @@ const connectRedis = () => {
 
 		client.on('ready', () => {
 			console.log('Redis connected.');
-			resolve();
+			resolve(client);
+
+			module.exports = client;
+			// client.RPUSH('TEST', 'ok', (err, reply) => {
+			// 	client.LREM('TEST', 1, 'token', (err, reply) => {
+			// 		console.log(reply);
+			// 		client.LRANGE('TEST', 0, -1, (err, reply) => {
+			// 			console.log(reply);
+			// 		});
+			// 	});
+			// });
 		});
 
 		client.on('end', () => {

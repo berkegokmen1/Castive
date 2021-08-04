@@ -57,9 +57,12 @@ app.use((error, req, res, next) => {
 });
 
 // DB Connections and server initializing
-
 Promise.all([connectMongoose(), connectRedis()])
-	.then((_) => {
+	.then(([result, client]) => {
+		module.exports = {
+			client,
+		};
+
 		app.listen(process.env.PORT || 4000, (_) => {
 			console.log('Server is up and running on port', process.env.PORT || 4000);
 		});
