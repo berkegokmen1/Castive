@@ -13,7 +13,6 @@ const usersRoutes = require('./routes/users.routes');
 
 // DB initializers imports
 const connectMongoose = require('./db/mongoose.db');
-const connectRedis = require('./db/redis.db');
 
 const app = express();
 // const server = https.createServer({}, app);
@@ -35,10 +34,10 @@ app.use(
 
 app.get('/', (_, res) => {
 	res.json({
+		success: true,
 		Data: {
 			message: 'Hi from /',
 		},
-		success: true,
 	});
 });
 
@@ -57,14 +56,14 @@ app.use((error, req, res, next) => {
 });
 
 // DB Connections and server initializing
-Promise.all([connectMongoose(), connectRedis()])
-	.then(([result, client]) => {
-		module.exports = {
-			client,
-		};
+connectMongoose()
+	.then((_) => {
+		// Initialize redis
+		require('./db/redis.db');
 
-		app.listen(process.env.PORT || 4000, (_) => {
-			console.log('Server is up and running on port', process.env.PORT || 4000);
+		const PORT = process.env.PORT || 4000;
+		app.listen(PORT, (_) => {
+			console.log('Server is up and running on port', PORT);
 		});
 	})
 	.catch((err) => {

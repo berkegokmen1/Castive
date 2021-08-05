@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
+const createError = require('http-errors');
 
 const userSchema = new mongoose.Schema(
 	{
@@ -84,44 +84,18 @@ userSchema.static('findByCredentials', async (username, email, password) => {
 		}
 
 		if (!user) {
-			const error = new Error('User not found.');
-			error.statusCode = 400;
-			throw error;
+			throw createError.Forbidden('User not found.');
 		}
 
 		const passCheck = await bcrypt.compare(password, user.password);
 
 		if (!passCheck) {
-			const error = new Error('Invalid credentials.');
-			error.statusCode = 403;
-			throw error;
+			throw createError.BadRequest('Invalid credentials.');
 		}
 
 		return user;
 	} catch (error) {
-		throw new Error(error);
-	}
-});
-
-userSchema.method('generateTokenPair', async function () {
-	try {
-		const user = this;
-
-		const accessToken = jwt.sign(
-			{ _id: user._id, email: user.email.value },
-			process.env.JWT_ACCESS_SECRET,
-			{ expiresIn: '1m' }
-		);
-
-		const refreshToken = jwt.sign(
-			{ accessToken },
-			process.env.JWT_REFRESH_SECRET,
-			{ expiresIn: '90 days' }
-		);
-
-		return { accessToken, refreshToken };
-	} catch (error) {
-		throw new Error(error);
+		throw error;
 	}
 });
 
