@@ -109,6 +109,7 @@ const postRefresh = async (req, res, next) => {
 						return next(createError.InternalServerError());
 					}
 
+					// Check refresh token
 					jwt.verify(
 						_refreshToken,
 						process.env.JWT_REFRESH_SECRET,
@@ -150,7 +151,6 @@ const postRefresh = async (req, res, next) => {
 										);
 									} else {
 										// Token not found in db
-										console.log('no reply token not found');
 										return next(createError.Unauthorized());
 									}
 								}
@@ -187,7 +187,7 @@ const postLogout = async (req, res, next) => {
 
 				const userId = payload.aud; // audience
 
-				if (req.user.id !== userId) {
+				if (req.user._id.toString() !== userId) {
 					// Access token and refresh token have different audiences
 					// User might be trying to use another refresh token
 					throw createError.Unauthorized();
@@ -210,28 +210,13 @@ const postLogout = async (req, res, next) => {
 	}
 };
 
-// has some work to do
 const postLogoutAll = async (req, res, next) => {
-	let cursor = 0;
-	let found = [];
-
-	const scan = (cb) => {
-		do {
-			client.scan(
-				[cursor, 'MATCH', `*:*:${req.user.id}`],
-				(newCursor, results) => {
-					cursor = newCursor;
-					found = found.concat(results);
-					scan();
-				}
-			);
-		} while (cursor !== 0);
-		cb();
-	};
-
 	try {
-		scan(() => {
-			client.DEL(found, (err, reply) => {
+		client.KEYS(`*:*:${req.user._id.toString()}`, (err, reply) => {
+			if (err) {
+				return next(createError.InternalServerError());
+			}
+			client.DEL(reply, (err, reply) => {
 				if (err) {
 					return next(createError.InternalServerError());
 				}
