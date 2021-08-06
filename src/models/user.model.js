@@ -36,7 +36,6 @@ const userSchema = new mongoose.Schema(
 				type: String,
 				required: false,
 				trim: true,
-				unique: true,
 			},
 			verified: {
 				type: Boolean,
@@ -78,9 +77,9 @@ userSchema.static('findByCredentials', async (username, email, password) => {
 	let user;
 	try {
 		if (username) {
-			user = await User.findOne({ username }).exec();
+			user = await User.findOne({ username }).lean().exec();
 		} else if (email) {
-			user = await User.findOne({ 'email.value': email }).exec();
+			user = await User.findOne({ 'email.value': email }).lean().exec();
 		}
 
 		if (!user) {

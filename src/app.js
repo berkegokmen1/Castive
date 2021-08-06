@@ -47,10 +47,11 @@ app.use('/users', usersRoutes);
 
 // Error handlers
 app.use((error, req, res, next) => {
-	return res.status(err.statusCode || 500).json({
+	console.log(error);
+	return res.status(error.statusCode || 500).json({
 		success: false,
 		Data: {
-			error: err.message,
+			error: error.message,
 		},
 	});
 });

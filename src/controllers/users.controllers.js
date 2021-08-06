@@ -1,5 +1,7 @@
 const User = require('../models/user.model');
 const sharp = require('sharp');
+const createError = require('http-errors');
+
 const { updateProfileValidation } = require('../util/formValidation');
 
 const getMe = (req, res, next) => {
@@ -24,9 +26,7 @@ const getMe = (req, res, next) => {
 const getMeAvatar = (req, res, next) => {
 	try {
 		if (!req.user.avatar) {
-			const error = new Error('No avatar is present.');
-			error.statusCode = 404;
-			return next(error);
+			return next(createError.NotFound('No avatar found.'));
 		}
 
 		res.set('Content-Type', 'image/png');
@@ -38,6 +38,10 @@ const getMeAvatar = (req, res, next) => {
 
 const putMeAvatar = async (req, res, next) => {
 	try {
+		if (!req.file) {
+			return next(createError.BadRequest('No file provided.'));
+		}
+
 		const buffer = await sharp(req.file.buffer)
 			.resize({ width: 500, height: 500 })
 			.png()
@@ -61,6 +65,7 @@ const deleteMeAvatar = async (req, res, next) => {
 	try {
 		req.user.avatar = undefined;
 		await req.user.save();
+
 		res.json({
 			success: true,
 			Data: {
@@ -76,9 +81,7 @@ const patchMe = async (req, res, next) => {
 	const allowedUpdates = ['email', 'age', 'phoneNumber'];
 	const isValid = updates.every((update) => allowedUpdates.includes(update));
 	if (!isValid) {
-		const error = new Error('Invalid operation(s).');
-		error.statusCode = 400;
-		return next(error);
+		return next(createError.BadRequest('Invalid operation(s).'));
 	}
 
 	const { email, age, phoneNumber } = req.body;
@@ -101,9 +104,7 @@ const patchMe = async (req, res, next) => {
 			.lean()
 			.exec();
 		if (emailCheck) {
-			const error = new Error('Email already exists.');
-			error.statusCode = 400;
-			next(error);
+			return next(createError.Conflict('Email already exists.'));
 		}
 	} catch (error) {
 		return next(error);
@@ -154,18 +155,14 @@ const deleteMe = async (req, res, next) => {
 const getUserId = async (req, res, next) => {
 	const userId = req.params.userId;
 	if (!userId) {
-		const error = new Error('No Id specified.');
-		error.statusCode = 400;
-		return next(error);
+		return next(createError.BadRequest('No id specified.'));
 	}
 
 	try {
 		const user = await User.findById(userId).lean().exec();
 
 		if (!user) {
-			const error = new Error('User not found.');
-			error.statusCode = 404;
-			return next(error);
+			return next(createError.NotFound('User not found.'));
 		}
 
 		const { username, subscription } = user;
@@ -186,24 +183,18 @@ const getUserId = async (req, res, next) => {
 const getUserIdAvatar = async (req, res, next) => {
 	const userId = req.params.userId;
 	if (!userId) {
-		const error = new Error('No Id specified.');
-		error.statusCode = 400;
-		return next(error);
+		return next(createError.BadRequest('No id specified.'));
 	}
 
 	try {
 		const user = await User.findById(userId).lean().exec();
 
 		if (!user) {
-			const error = new Error('User not found.');
-			error.statusCode = 404;
-			return next(error);
+			return next(createError.NotFound('User not found.'));
 		}
 
 		if (!user.avatar) {
-			const error = new Error('No avatar is present.');
-			error.statusCode = 404;
-			return next(error);
+			return next(createError.NotFound('No avatar found.'));
 		}
 
 		res.set('Content-Type', 'image/png');
