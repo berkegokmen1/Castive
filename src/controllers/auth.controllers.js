@@ -6,6 +6,7 @@ const User = require('../models/user.model');
 
 const { registerValidation } = require('../util/formValidation');
 const client = require('../db/redis.db');
+const { sendVerificationMail } = require('../util/mailer');
 
 const putRegister = async (req, res, next) => {
 	try {
@@ -47,11 +48,14 @@ const putRegister = async (req, res, next) => {
 
 		await newUser.save();
 
+		// Send async confirmation mail
+		sendVerificationMail(req, email);
+
 		return res.status(201).json({
 			success: true,
 			Data: {
-				accessToken,
-				refreshToken,
+				message:
+					'Confirmation mail has been sent. Please confirm your account before signing in.',
 			},
 		});
 	} catch (error) {
@@ -69,11 +73,31 @@ const postLogin = async (req, res, next) => {
 		const user = await User.findByCredentials(bUsername, bEmail, bPassword);
 
 		const userId = user._id.toString();
+		const email = user.email.value;
+
+		// Return verify account response if email is not verified
+		if (!user.email.verified) {
+			sendVerificationMail(req, email);
+
+			return res.json({
+				success: false,
+				Data: {
+					message:
+						'Confirmation mail has been sent. Please confirm your account before signing in.',
+				},
+			});
+		}
 
 		const accessToken = await signAccessToken(userId);
 		const refreshToken = await signRefreshToken(userId);
 
-		return res.json({ accessToken, refreshToken });
+		return res.json({
+			success: true,
+			Data: {
+				accessToken,
+				refreshToken,
+			},
+		});
 	} catch (error) {
 		next(error);
 	}
@@ -146,7 +170,13 @@ const postRefresh = async (req, res, next) => {
 												const accessToken = await signAccessToken(userId);
 												const refreshToken = await signRefreshToken(userId);
 
-												return res.json({ accessToken, refreshToken });
+												return res.json({
+													success: true,
+													Data: {
+														accessToken,
+														refreshToken,
+													},
+												});
 											}
 										);
 									} else {
@@ -200,7 +230,12 @@ const postLogout = async (req, res, next) => {
 							return reject(createError.InternalServerError());
 						}
 
-						return res.sendStatus(204);
+						return res.json({
+							success: true,
+							Data: {
+								message: 'Logged out.',
+							},
+						});
 					}
 				);
 			}
@@ -221,8 +256,100 @@ const postLogoutAll = async (req, res, next) => {
 					return next(createError.InternalServerError());
 				}
 
-				return res.sendStatus(204);
+				return res.json({
+					success: true,
+					Data: {
+						message: 'Logged out from all sessions.',
+					},
+				});
 			});
+		});
+	} catch (error) {
+		next(error);
+	}
+};
+
+const postVerifyEmail = async (req, res, next) => {
+	try {
+		if (!req.params.token) {
+			return next(createError.BadRequest('Verification token is required.'));
+		}
+
+		const emailToken = req.params.token;
+
+		jwt.verify(
+			emailToken,
+			process.env.JWT_EMAIL_SECRET,
+			async (err, payload) => {
+				if (err) {
+					return next(createError.Unauthorized());
+				}
+
+				const email = payload.aud;
+
+				const user = await User.findOne({ 'email.value': email }).exec();
+
+				if (!user) {
+					// Made request for a random email
+					return next(createError.BadRequest('User not found.'));
+				}
+
+				if (!user.email.verified) {
+					// Email is not verified
+					user.email.verified = true;
+
+					await user.save();
+
+					const userId = user._id.toString();
+
+					const accessToken = await signAccessToken(userId);
+					const refreshToken = await signRefreshToken(userId);
+
+					return res.json({
+						success: true,
+						Data: {
+							accessToken,
+							refreshToken,
+						},
+					});
+				} else {
+					// Email has already been verified
+					return next(
+						createError.BadRequest('Email has already been verified.')
+					);
+				}
+			}
+		);
+	} catch (error) {
+		next(error);
+	}
+};
+
+const postRequestNewMail = async (req, res, next) => {
+	try {
+		const email = req.body.email;
+
+		if (!email) {
+			return next(createError.BadRequest('Email is required'));
+		}
+
+		const user = await User.findOne({ 'email.value': email }).lean().exec();
+
+		if (!user) {
+			return next(createError.BadRequest('Email is not registered.'));
+		}
+
+		if (user.email.verified) {
+			return next(createError.BadRequest('Email has already been verified.'));
+		}
+
+		sendVerificationMail(req, email);
+
+		return res.json({
+			success: true,
+			Data: {
+				message: 'New verification mail has been sent.',
+			},
 		});
 	} catch (error) {
 		next(error);
@@ -235,4 +362,6 @@ module.exports = {
 	postRefresh,
 	postLogout,
 	postLogoutAll,
+	postVerifyEmail,
+	postRequestNewMail,
 };

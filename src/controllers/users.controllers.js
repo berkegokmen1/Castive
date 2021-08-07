@@ -3,6 +3,8 @@ const sharp = require('sharp');
 const createError = require('http-errors');
 
 const { updateProfileValidation } = require('../util/formValidation');
+const client = require('../db/redis.db');
+const { sendVerificationMail } = require('../util/mailer');
 
 const getMe = (req, res, next) => {
 	try {
@@ -66,7 +68,7 @@ const deleteMeAvatar = async (req, res, next) => {
 		req.user.avatar = undefined;
 		await req.user.save();
 
-		res.json({
+		return res.json({
 			success: true,
 			Data: {
 				message: 'Avatar removed.',
@@ -76,6 +78,8 @@ const deleteMeAvatar = async (req, res, next) => {
 		return next(error);
 	}
 };
+
+// Has some work to do
 const patchMe = async (req, res, next) => {
 	const updates = Object.keys(req.body);
 	const allowedUpdates = ['email', 'age', 'phoneNumber'];
@@ -113,6 +117,8 @@ const patchMe = async (req, res, next) => {
 	try {
 		if (email) {
 			req.user.email.value = email;
+			req.user.email.verified = false;
+			sendVerificationMail(req, req.user._id.toString(), email);
 		}
 		if (age) {
 			req.user.age = age;
@@ -142,11 +148,24 @@ const patchMe = async (req, res, next) => {
 const deleteMe = async (req, res, next) => {
 	try {
 		await req.user.remove();
-		return res.json({
-			success: true,
-			Data: {
-				message: 'User removed.',
-			},
+
+		// Delete all tokens belonging to the user
+		client.KEYS(`*:*:${req.user._id.toString()}`, (err, reply) => {
+			if (err) {
+				return next(createError.InternalServerError());
+			}
+			client.DEL(reply, (err, reply) => {
+				if (err) {
+					return next(createError.InternalServerError());
+				}
+
+				return res.json({
+					success: true,
+					Data: {
+						message: 'User removed.',
+					},
+				});
+			});
 		});
 	} catch (error) {
 		next(error);
@@ -198,7 +217,7 @@ const getUserIdAvatar = async (req, res, next) => {
 		}
 
 		res.set('Content-Type', 'image/png');
-		res.send(user.avatar);
+		return res.send(user.avatar);
 	} catch (error) {
 		return next(error);
 	}

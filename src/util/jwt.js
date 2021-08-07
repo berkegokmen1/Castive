@@ -10,7 +10,7 @@ const signAccessToken = (userId) => {
 			process.env.JWT_ACCESS_SECRET,
 			{
 				expiresIn: process.env.JWT_ACCESS_EXPIRATION,
-				issuer: 'castive.me',
+				issuer: process.env.JWT_ISSUER,
 				audience: userId,
 			},
 			(err, token) => {
@@ -43,7 +43,7 @@ const signRefreshToken = (userId) => {
 			process.env.JWT_REFRESH_SECRET,
 			{
 				expiresIn: process.env.JWT_REFRESH_EXPIRATION,
-				issuer: 'castive.me',
+				issuer: process.env.JWT_ISSUER,
 				audience: userId,
 			},
 			(err, token) => {
@@ -69,7 +69,29 @@ const signRefreshToken = (userId) => {
 	});
 };
 
+const signEmailToken = (email) => {
+	return new Promise((resolve, reject) => {
+		jwt.sign(
+			{},
+			process.env.JWT_EMAIL_SECRET,
+			{
+				expiresIn: process.env.JWT_EMAIL_EXPIRATION,
+				issuer: process.env.JWT_ISSUER,
+				audience: email,
+			},
+			(err, token) => {
+				if (err) {
+					return reject(createError.InternalServerError());
+				}
+
+				return resolve(token);
+			}
+		);
+	});
+};
+
 module.exports = {
 	signAccessToken,
 	signRefreshToken,
+	signEmailToken,
 };

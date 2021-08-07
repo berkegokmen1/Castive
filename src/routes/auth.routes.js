@@ -10,6 +10,8 @@ const {
 	postRefresh,
 	postLogout,
 	postLogoutAll,
+	postVerifyEmail,
+	postRequestNewMail,
 } = require('../controllers/auth.controllers');
 
 // Routes => /auth
@@ -22,5 +24,9 @@ router.post('/refresh', postRefresh);
 router.post('/logout', auth, postLogout);
 
 router.post('/logoutall', auth, postLogoutAll);
+
+router.post('/verify/:token', postVerifyEmail);
+
+router.post('/requestnewmail', postRequestNewMail);
 
 module.exports = router;
