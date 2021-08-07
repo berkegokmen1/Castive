@@ -4,9 +4,12 @@ const jwt = require('jsonwebtoken');
 const { signAccessToken, signRefreshToken } = require('../util/jwt');
 const User = require('../models/user.model');
 
-const { registerValidation } = require('../util/formValidation');
+const {
+	registerValidation,
+	resetPasswordValidation,
+} = require('../util/formValidation');
 const client = require('../db/redis.db');
-const { sendVerificationMail } = require('../util/mailer');
+const { sendVerificationMail, sendResetMail } = require('../util/mailer');
 
 const putRegister = async (req, res, next) => {
 	try {
@@ -17,7 +20,7 @@ const putRegister = async (req, res, next) => {
 			return res.status(400).json({
 				success: false,
 				Data: {
-					message: 'Error: Validation Errors.',
+					error: 'Validation Errors',
 					validationErrors,
 				},
 			});
@@ -43,13 +46,10 @@ const putRegister = async (req, res, next) => {
 
 		const userId = newUser._id.toString();
 
-		const accessToken = await signAccessToken(userId);
-		const refreshToken = await signRefreshToken(userId);
-
 		await newUser.save();
 
 		// Send async confirmation mail
-		sendVerificationMail(req, email);
+		sendVerificationMail(email);
 
 		return res.status(201).json({
 			success: true,
@@ -77,7 +77,7 @@ const postLogin = async (req, res, next) => {
 
 		// Return verify account response if email is not verified
 		if (!user.email.verified) {
-			sendVerificationMail(req, email);
+			sendVerificationMail(email);
 
 			return res.json({
 				success: false,
@@ -271,11 +271,11 @@ const postLogoutAll = async (req, res, next) => {
 
 const postVerifyEmail = async (req, res, next) => {
 	try {
-		if (!req.params.token) {
+		if (!req.body.token) {
 			return next(createError.BadRequest('Verification token is required.'));
 		}
 
-		const emailToken = req.params.token;
+		const emailToken = req.body.token;
 
 		jwt.verify(
 			emailToken,
@@ -325,7 +325,7 @@ const postVerifyEmail = async (req, res, next) => {
 	}
 };
 
-const postRequestNewMail = async (req, res, next) => {
+const postRequestVerificationMail = async (req, res, next) => {
 	try {
 		const email = req.body.email;
 
@@ -343,12 +343,115 @@ const postRequestNewMail = async (req, res, next) => {
 			return next(createError.BadRequest('Email has already been verified.'));
 		}
 
-		sendVerificationMail(req, email);
+		sendVerificationMail(email);
 
 		return res.json({
 			success: true,
 			Data: {
 				message: 'New verification mail has been sent.',
+			},
+		});
+	} catch (error) {
+		next(error);
+	}
+};
+
+const postReset = async (req, res, next) => {
+	try {
+		const { token, password } = req.body;
+
+		if (!token || !password) {
+			return next(
+				createError.BadRequest('Token and new password is required.')
+			);
+		}
+
+		const validationErrors = resetPasswordValidation(password);
+
+		if (validationErrors.length > 0) {
+			return res.status(400).json({
+				success: false,
+				Data: {
+					error: 'Validation Errors',
+					validationErrors,
+				},
+			});
+		}
+
+		// Check if the token is in the redis db, ie. not used before
+		client.GET(`RESET:${token}`, (err, reply) => {
+			if (err) {
+				return next(createError.InternalServerError());
+			}
+
+			if (!reply) {
+				return next(createError.Unauthorized());
+			}
+
+			// We have the token in the db
+			// Verify the token
+			// Update the password
+			// Remove the token from db
+			jwt.verify(
+				token,
+				process.env.JWT_RESET_PASSWORD_SECRET,
+				async (err, payload) => {
+					if (err) {
+						return next(createError.Unauthorized());
+					}
+
+					const email = payload.aud;
+
+					const user = await User.findOne({ 'email.value': email }).exec();
+
+					if (!user) {
+						return next(createError.BadRequest('User not found.'));
+					}
+
+					// Update the password of the user
+					user.password = password;
+					await user.save();
+
+					// Remove the reset token from redis to prevent subsequent use
+					client.DEL(`RESET:${token}`, async (err, reply) => {
+						if (err) {
+							return next(createError.InternalServerError());
+						}
+						return res.json({
+							success: true,
+							Data: {
+								message: 'Password updated',
+							},
+						});
+					});
+				}
+			);
+		});
+	} catch (error) {
+		next(error);
+	}
+};
+
+const postRequestResetMail = async (req, res, next) => {
+	try {
+		const email = req.body.email;
+
+		if (!email) {
+			return next(createError.BadRequest('Email is required'));
+		}
+
+		const user = await User.findOne({ 'email.value': email }).lean().exec();
+
+		if (!user) {
+			return next(createError.BadRequest('Email is not registered.'));
+		}
+
+		sendResetMail(email);
+
+		return res.json({
+			success: true,
+			Data: {
+				message: 'Password reset mail has been sent.',
 			},
 		});
 	} catch (error) {
@@ -363,5 +466,7 @@ module.exports = {
 	postLogout,
 	postLogoutAll,
 	postVerifyEmail,
-	postRequestNewMail,
+	postRequestVerificationMail,
+	postReset,
+	postRequestResetMail,
 };

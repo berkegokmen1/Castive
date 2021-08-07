@@ -1,7 +1,7 @@
 const nodemailer = require('nodemailer');
 const url = require('url');
 
-const { signEmailToken } = require('./jwt');
+const { signEmailToken, signResetToken } = require('./jwt');
 
 const transporter = nodemailer.createTransport({
 	service: 'gmail',
@@ -12,18 +12,12 @@ const transporter = nodemailer.createTransport({
 	logger: process.env.NODE_ENV === 'dev',
 });
 
-const sendVerificationMail = async (req, email) => {
+const sendVerificationMail = async (email) => {
 	// Generate confirmation token
 	const emailToken = await signEmailToken(email);
 
 	// Generate link from current url
-	const link =
-		url.format({
-			protocol: req.protocol,
-			host: req.get('host'),
-		}) +
-		'/auth/verify/' +
-		emailToken;
+	const link = process.env.BASE_URL + '/auth/verify/' + emailToken;
 
 	transporter.sendMail({
 		from: 'no-reply@castive.me',
@@ -32,9 +26,30 @@ const sendVerificationMail = async (req, email) => {
 		html: `
 			<h1>Click the link below</h1>
 			<a href="${link}">${link}</a>
-			<p>After 24 hours, the link will be expired</p>
+			<p>After 24 hours, the link will be expired.</p>
 			`,
 	});
 };
 
-module.exports = { sendVerificationMail };
+const sendResetMail = async (email) => {
+	const forgotPasswordToken = await signResetToken(email);
+
+	// Generate link from current url
+	const link = process.env.BASE_URL + '/auth/reset/' + forgotPasswordToken;
+
+	transporter.sendMail({
+		from: 'no-reply@castive.me',
+		to: email,
+		subject: 'Password reset request',
+		html: `
+		
+			<h1>Click the link below</h1>
+			<a href="${link}">${link}</a>
+			<p>After 1 hour, the link will be expired.</p>
+
+			<p>Simply ignore this email if you did not request it.</p>
+			`,
+	});
+};
+
+module.exports = { sendVerificationMail, sendResetMail };

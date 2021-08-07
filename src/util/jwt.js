@@ -90,8 +90,42 @@ const signEmailToken = (email) => {
 	});
 };
 
+const signResetToken = (email) => {
+	return new Promise((resolve, reject) => {
+		jwt.sign(
+			{},
+			process.env.JWT_RESET_PASSWORD_SECRET,
+			{
+				expiresIn: process.env.JWT_RESET_PASSWORD_EXPIRATION,
+				issuer: process.env.JWT_ISSUER,
+				audience: email,
+			},
+			(err, token) => {
+				if (err) {
+					return reject(createError.InternalServerError());
+				}
+
+				client.set(
+					`RESET:${token}`,
+					1,
+					'EX' /* expiration */,
+					60 * 60 /* seconds */,
+					(err, reply) => {
+						if (err) {
+							return reject(createError.InternalServerError());
+						}
+
+						return resolve(token);
+					}
+				);
+			}
+		);
+	});
+};
+
 module.exports = {
 	signAccessToken,
 	signRefreshToken,
 	signEmailToken,
+	signResetToken,
 };

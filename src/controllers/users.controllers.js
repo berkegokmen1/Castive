@@ -96,7 +96,7 @@ const patchMe = async (req, res, next) => {
 		return res.status(400).json({
 			success: false,
 			Data: {
-				message: 'Error: Validation Errors.',
+				error: 'Validation Errors',
 				validationErrors,
 			},
 		});
@@ -118,7 +118,7 @@ const patchMe = async (req, res, next) => {
 		if (email) {
 			req.user.email.value = email;
 			req.user.email.verified = false;
-			sendVerificationMail(req, req.user._id.toString(), email);
+			sendVerificationMail(email);
 		}
 		if (age) {
 			req.user.age = age;

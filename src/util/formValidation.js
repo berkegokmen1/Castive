@@ -98,4 +98,44 @@ const updateProfileValidation = (email, age, phoneNumber) => {
 	return errors;
 };
 
-module.exports = { registerValidation, updateProfileValidation };
+const resetPasswordValidation = (password) => {
+	const errors = [];
+
+	if (password === '') {
+		errors.push('Passwords cannot be blank.');
+	} else {
+		if (password.length < 6) {
+			errors.push('Password must be at least 6 characters long.');
+		}
+
+		if (password.length > 25) {
+			errors.push('Password length must be less than 25 characters long.');
+		}
+
+		if (/\s/.test(password)) {
+			errors.push('Password cannot contain any whitespaces.');
+		}
+
+		if (
+			!validator.isStrongPassword(password, {
+				minLowercase: 1,
+				minUppercase: 1,
+				minNumbers: 1,
+				minSymbols: 1,
+				returnScore: false,
+			})
+		) {
+			errors.push(
+				'Password must contain at least 1 uppercase, 1 lowercase, 1 numeric and 1 special character.'
+			);
+		}
+	}
+
+	return errors;
+};
+
+module.exports = {
+	registerValidation,
+	updateProfileValidation,
+	resetPasswordValidation,
+};

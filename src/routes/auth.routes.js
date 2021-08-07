@@ -11,7 +11,9 @@ const {
 	postLogout,
 	postLogoutAll,
 	postVerifyEmail,
-	postRequestNewMail,
+	postRequestVerificationMail,
+	postReset,
+	postRequestResetMail,
 } = require('../controllers/auth.controllers');
 
 // Routes => /auth
@@ -25,8 +27,12 @@ router.post('/logout', auth, postLogout);
 
 router.post('/logoutall', auth, postLogoutAll);
 
-router.post('/verify/:token', postVerifyEmail);
+router.post('/verify', postVerifyEmail);
 
-router.post('/requestnewmail', postRequestNewMail);
+router.post('/reset', postReset);
+
+router.post('/request/verification', postRequestVerificationMail);
+
+router.post('/request/reset', postRequestResetMail);
 
 module.exports = router;
