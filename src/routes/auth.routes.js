@@ -10,29 +10,35 @@ const {
 	postRefresh,
 	postLogout,
 	postLogoutAll,
-	postVerifyEmail,
+	patchVerifyEmail,
 	postRequestVerificationMail,
-	postReset,
+	patchReset,
 	postRequestResetMail,
 } = require('../controllers/auth.controllers');
 
+const { authLimiter, requestMailLimiter } = require('../util/limiter');
+
 // Routes => /auth
-router.put('/register', putRegister);
+router.put('/register', authLimiter, putRegister);
 
-router.post('/login', postLogin);
+router.post('/login', authLimiter, postLogin);
 
-router.post('/refresh', postRefresh);
+router.post('/refresh', authLimiter, postRefresh);
 
 router.post('/logout', auth, postLogout);
 
 router.post('/logoutall', auth, postLogoutAll);
 
-router.post('/verify', postVerifyEmail);
+router.patch('/verify', patchVerifyEmail);
 
-router.post('/reset', postReset);
+router.patch('/reset', patchReset);
 
-router.post('/request/verification', postRequestVerificationMail);
+router.post(
+	'/request/verification',
+	requestMailLimiter,
+	postRequestVerificationMail
+);
 
-router.post('/request/reset', postRequestResetMail);
+router.post('/request/reset', requestMailLimiter, postRequestResetMail);
 
 module.exports = router;

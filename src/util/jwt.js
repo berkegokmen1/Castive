@@ -3,6 +3,11 @@ const createError = require('http-errors');
 
 const client = require('../db/redis.db');
 
+/**
+ * Store jwt tokens in http-only cookies => does not allow access or modification to token
+ * Storing in local storage => X
+ */
+
 const signAccessToken = (userId) => {
 	return new Promise((resolve, reject) => {
 		jwt.sign(
@@ -75,7 +80,6 @@ const signEmailToken = (email) => {
 			{},
 			process.env.JWT_EMAIL_SECRET,
 			{
-				expiresIn: process.env.JWT_EMAIL_EXPIRATION,
 				issuer: process.env.JWT_ISSUER,
 				audience: email,
 			},
@@ -109,7 +113,7 @@ const signResetToken = (email) => {
 					`RESET:${token}`,
 					1,
 					'EX' /* expiration */,
-					60 * 60 /* seconds */,
+					15 * 60 /* seconds */,
 					(err, reply) => {
 						if (err) {
 							return reject(createError.InternalServerError());

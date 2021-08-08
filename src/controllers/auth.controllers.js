@@ -9,7 +9,11 @@ const {
 	resetPasswordValidation,
 } = require('../util/formValidation');
 const client = require('../db/redis.db');
-const { sendVerificationMail, sendResetMail } = require('../util/mailer');
+const {
+	sendVerificationMail,
+	sendResetMail,
+	sendWelcomeMail,
+} = require('../util/mailer');
 
 const putRegister = async (req, res, next) => {
 	try {
@@ -51,11 +55,17 @@ const putRegister = async (req, res, next) => {
 		// Send async confirmation mail
 		sendVerificationMail(email);
 
+		// Send async welcome mail
+		sendWelcomeMail(email, username);
+
+		const accessToken = await signAccessToken(userId);
+		const refreshToken = await signRefreshToken(userId);
+
 		return res.status(201).json({
 			success: true,
 			Data: {
-				message:
-					'Confirmation mail has been sent. Please confirm your account before signing in.',
+				accessToken,
+				refreshToken,
 			},
 		});
 	} catch (error) {
@@ -75,17 +85,9 @@ const postLogin = async (req, res, next) => {
 		const userId = user._id.toString();
 		const email = user.email.value;
 
-		// Return verify account response if email is not verified
+		// Send async confirmation mail if the account is not verified
 		if (!user.email.verified) {
 			sendVerificationMail(email);
-
-			return res.json({
-				success: false,
-				Data: {
-					message:
-						'Confirmation mail has been sent. Please confirm your account before signing in.',
-				},
-			});
 		}
 
 		const accessToken = await signAccessToken(userId);
@@ -269,7 +271,7 @@ const postLogoutAll = async (req, res, next) => {
 	}
 };
 
-const postVerifyEmail = async (req, res, next) => {
+const patchVerifyEmail = async (req, res, next) => {
 	try {
 		if (!req.body.token) {
 			return next(createError.BadRequest('Verification token is required.'));
@@ -300,16 +302,10 @@ const postVerifyEmail = async (req, res, next) => {
 
 					await user.save();
 
-					const userId = user._id.toString();
-
-					const accessToken = await signAccessToken(userId);
-					const refreshToken = await signRefreshToken(userId);
-
 					return res.json({
 						success: true,
 						Data: {
-							accessToken,
-							refreshToken,
+							message: `Email (${email}) has successfully been verified.`,
 						},
 					});
 				} else {
@@ -356,7 +352,7 @@ const postRequestVerificationMail = async (req, res, next) => {
 	}
 };
 
-const postReset = async (req, res, next) => {
+const patchReset = async (req, res, next) => {
 	try {
 		const { token, password } = req.body;
 
@@ -417,11 +413,24 @@ const postReset = async (req, res, next) => {
 						if (err) {
 							return next(createError.InternalServerError());
 						}
-						return res.json({
-							success: true,
-							Data: {
-								message: 'Password updated',
-							},
+
+						// Remove all access and refresh tokens of the user
+						client.KEYS(`*:*:${user._id.toString()}`, (err, reply) => {
+							if (err) {
+								return next(createError.InternalServerError());
+							}
+							client.DEL(reply, (err, reply) => {
+								if (err) {
+									return next(createError.InternalServerError());
+								}
+
+								return res.json({
+									success: true,
+									Data: {
+										message: 'Password updated',
+									},
+								});
+							});
 						});
 					});
 				}
@@ -465,8 +474,8 @@ module.exports = {
 	postRefresh,
 	postLogout,
 	postLogoutAll,
-	postVerifyEmail,
+	patchVerifyEmail,
 	postRequestVerificationMail,
-	postReset,
+	patchReset,
 	postRequestResetMail,
 };

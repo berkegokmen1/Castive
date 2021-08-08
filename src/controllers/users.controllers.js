@@ -172,13 +172,13 @@ const deleteMe = async (req, res, next) => {
 	}
 };
 const getUserId = async (req, res, next) => {
-	const userId = req.params.userId;
-	if (!userId) {
-		return next(createError.BadRequest('No id specified.'));
+	const username = req.params.username;
+	if (!username) {
+		return next(createError.BadRequest('No username specified.'));
 	}
 
 	try {
-		const user = await User.findById(userId).lean().exec();
+		const user = await User.findOne({ username }).lean().exec();
 
 		if (!user) {
 			return next(createError.NotFound('User not found.'));
@@ -200,13 +200,13 @@ const getUserId = async (req, res, next) => {
 	}
 };
 const getUserIdAvatar = async (req, res, next) => {
-	const userId = req.params.userId;
-	if (!userId) {
-		return next(createError.BadRequest('No id specified.'));
+	const username = req.params.username;
+	if (!username) {
+		return next(createError.BadRequest('No username specified.'));
 	}
 
 	try {
-		const user = await User.findById(userId).lean().exec();
+		const user = await User.findOne({ username }).exec();
 
 		if (!user) {
 			return next(createError.NotFound('User not found.'));

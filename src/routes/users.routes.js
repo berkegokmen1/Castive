@@ -43,8 +43,8 @@ router.patch('/me', auth, patchMe); // Update logged in user's profile
 
 router.delete('/me', auth, deleteMe); // Delete account of logged in user
 
-router.get('/:userId', auth, getUserId); // Public profile of another user
+router.get('/:username', auth, getUserId); // Public profile of another user
 
-router.get('/:userId/avatar', auth, getUserIdAvatar); // Avatar of another profile
+router.get('/:username/avatar', auth, getUserIdAvatar); // Avatar of another profile
 
 module.exports = router;

@@ -1,6 +1,6 @@
 const validator = require('validator');
 
-const registerValidation = (username, age, email, password, password2) => {
+const registerValidation = (username, age, email, password) => {
 	// username => no special chars, min 2, max 16, no white space
 	// age => greater than or equal to 0
 	// email => valid email

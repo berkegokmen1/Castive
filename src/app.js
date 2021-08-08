@@ -5,24 +5,56 @@ const morgan = require('morgan');
 const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
-// const https = require('https');
+const mongoSanitize = require('express-mongo-sanitize');
+const xss = require('xss-clean');
+const hpp = require('hpp');
+const createError = require('http-errors');
 
 // Route imports
 const authRoutes = require('./routes/auth.routes');
 const usersRoutes = require('./routes/users.routes');
 
-// DB initializers imports
 const connectMongoose = require('./db/mongoose.db');
 
 const app = express();
-// const server = https.createServer({}, app);
 
 // Helper middlewares
+
+// Behind a reverse proxy (Heroku, Bluemix, AWS ELB, Nginx, etc)
+app.set('trust proxy', 1);
+
+// Parse body
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+
+// Response header
 app.use(helmet());
-app.use(cors());
-app.use(morgan('dev'));
+
+// Cors
+app.use(
+	cors({
+		origin: process.env.BASE_URL,
+	})
+);
+
+// Logger
+app.use(morgan(process.env.NODE_ENV === 'dev' ? 'dev' : 'short'));
+
+// Prevent against nosql query injection attacks
+app.use(
+	mongoSanitize({
+		onSanitize: (_) => {
+			throw createError.Forbidden();
+		},
+	})
+);
+
+// Prevent against xss attacks
+app.use(xss());
+
+// Prevent parameter pollution
+app.use(hpp());
+
 app.use(
 	compression({
 		filter: (req, res) => {
@@ -32,22 +64,22 @@ app.use(
 	})
 );
 
-app.get('/', (_, res) => {
-	res.json({
-		success: true,
-		Data: {
-			message: 'Hi from /',
-		},
-	});
-});
-
 // Route registers
 app.use('/auth', authRoutes);
 app.use('/users', usersRoutes);
 
+// 404 Route
+app.use('*', (req, res, next) => {
+	return res.status(404).json({
+		success: false,
+		Data: {
+			error: 'Endpoint not found.',
+		},
+	});
+});
+
 // Error handlers
 app.use((error, req, res, next) => {
-	console.log(error);
 	return res.status(error.statusCode || 500).json({
 		success: false,
 		Data: {

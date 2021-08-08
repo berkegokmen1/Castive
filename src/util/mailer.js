@@ -28,6 +28,7 @@ const sendVerificationMail = async (email) => {
 			<a href="${link}">${link}</a>
 			<p>After 24 hours, the link will be expired.</p>
 			`,
+		text: '',
 	});
 };
 
@@ -45,11 +46,25 @@ const sendResetMail = async (email) => {
 		
 			<h1>Click the link below</h1>
 			<a href="${link}">${link}</a>
-			<p>After 1 hour, the link will be expired.</p>
+			<p>After 15 minutes, the link will be expired.</p>
 
 			<p>Simply ignore this email if you did not request it.</p>
 			`,
+		text: '',
 	});
 };
 
-module.exports = { sendVerificationMail, sendResetMail };
+const sendWelcomeMail = (email, username) => {
+	transporter.sendMail({
+		from: 'no-reply@castive.me',
+		to: email,
+		subject: 'Welcome to Castive!',
+		html: `
+			<h1>Welcome to Castive!</h1>
+			<p>Start building your playlists and sharing!</p>
+			`,
+		text: '',
+	});
+};
+
+module.exports = { sendVerificationMail, sendResetMail, sendWelcomeMail };
