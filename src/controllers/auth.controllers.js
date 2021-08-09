@@ -2,14 +2,14 @@ const createError = require('http-errors');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 
-const { signAccessToken, signRefreshToken } = require('../util/jwt');
 const User = require('../models/user.model');
+const client = require('../db/redis.db');
 
+const { signAccessToken, signRefreshToken } = require('../util/jwt');
 const {
 	registerValidation,
 	resetPasswordValidation,
 } = require('../util/formValidation');
-const client = require('../db/redis.db');
 const {
 	sendVerificationMail,
 	sendResetMail,
@@ -38,7 +38,11 @@ const putRegister = async (req, res, next) => {
 				throw createError.Conflict('Email already exists.');
 			}
 
-			const usernameCheck = await User.findOne({ username }).lean().exec();
+			const usernameCheck = await User.findOne({
+				username: { $regex: new RegExp(`^${username}$`, 'i') },
+			})
+				.lean()
+				.exec();
 			if (usernameCheck) {
 				throw createError.Conflict('Username already exists.');
 			}
@@ -262,7 +266,16 @@ const postLogoutAll = async (req, res, next) => {
 			if (err) {
 				return next(createError.InternalServerError());
 			}
-			client.DEL(reply, (err, reply) => {
+
+			let toBeRemoved;
+
+			if (reply.length === 0 || !reply) {
+				toBeRemoved = ['dummy']; // DEL command throws an error whenever the given array is empty
+			} else {
+				toBeRemoved = reply;
+			}
+
+			client.DEL(toBeRemoved, (err, reply) => {
 				if (err) {
 					return next(createError.InternalServerError());
 				}
@@ -424,11 +437,6 @@ const patchReset = async (req, res, next) => {
 						);
 					}
 
-					// Update the password of the user and make the email verified since it has been used by the user
-					user.password = password;
-					user.email.verified = true;
-					await user.save();
-
 					// Remove the reset token from redis to prevent subsequent use
 					client.DEL(`RESET:${token}`, async (err, reply) => {
 						if (err) {
@@ -440,10 +448,26 @@ const patchReset = async (req, res, next) => {
 							if (err) {
 								return next(createError.InternalServerError());
 							}
-							client.DEL(reply, (err, reply) => {
+
+							let toBeRemoved;
+
+							if (reply.length === 0 || !reply) {
+								toBeRemoved = ['dummy']; // DEL command throws an error whenever the given array is empty
+							} else {
+								toBeRemoved = reply;
+							}
+
+							client.DEL(toBeRemoved, async (err, reply) => {
 								if (err) {
+									console.log(err);
 									return next(createError.InternalServerError());
 								}
+
+								// Update the password of the user and
+								// make the email verified since it has been used by the user
+								user.password = password;
+								user.email.verified = true;
+								await user.save();
 
 								return res.json({
 									success: true,

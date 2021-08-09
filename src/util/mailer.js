@@ -3,7 +3,7 @@ const nodemailer = require('nodemailer');
 const { signEmailToken, signResetToken } = require('./jwt');
 
 const transporter = nodemailer.createTransport({
-	service: 'gmail',
+	service: process.env.MAIL_SERVICE,
 	auth: {
 		user: process.env.MAILER_USER,
 		pass: process.env.MAILER_PASS,

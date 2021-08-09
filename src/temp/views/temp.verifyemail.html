@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html class="no-js" lang="">
+	<head>
+		<meta charset="utf-8" />
+		<title></title>
+		<meta name="description" content="" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+		<meta property="og:title" content="" />
+		<meta property="og:type" content="" />
+		<meta property="og:url" content="" />
+		<meta property="og:image" content="" />
+
+		<link rel="manifest" href="site.webmanifest" />
+	</head>
+
+	<body>
+		<p id="result">Loading...</p>
+		<script>
+			const resBox = document.getElementById('result');
+			const token = window.location.pathname.split('/')[3]; // [0]/[1]auth/[2]verify/[3]token
+
+			fetch(window.location.origin + '/auth/verify', {
+				method: 'PATCH',
+				headers: {
+					Accept: 'application/json',
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({ token }),
+			})
+				.then((reply) => {
+					return reply.json();
+				})
+				.then((result) => {
+					console.log(result);
+					if (result.success) {
+						resBox.innerText = result.Data.message;
+					} else {
+						resBox.innerText = result.Data.error;
+					}
+				})
+				.catch((err) => {
+					console.log(err);
+				});
+		</script>
+	</body>
+</html>

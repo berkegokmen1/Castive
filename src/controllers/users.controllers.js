@@ -82,13 +82,13 @@ const deleteMeAvatar = async (req, res, next) => {
 // Has some work to do
 const patchMe = async (req, res, next) => {
 	const updates = Object.keys(req.body);
-	const allowedUpdates = ['email', 'age', 'phoneNumber'];
+	const allowedUpdates = ['email', 'age'];
 	const isValid = updates.every((update) => allowedUpdates.includes(update));
 	if (!isValid) {
 		return next(createError.BadRequest('Invalid operation(s).'));
 	}
 
-	const { email, age, phoneNumber } = req.body;
+	const { email, age } = req.body;
 
 	const validationErrors = updateProfileValidation(email, age);
 
@@ -133,7 +133,6 @@ const patchMe = async (req, res, next) => {
 				updatedFields: {
 					email,
 					age,
-					phoneNumber,
 				},
 			},
 		});

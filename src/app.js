@@ -23,6 +23,17 @@ const app = express();
 // Behind a reverse proxy (Heroku, Bluemix, AWS ELB, Nginx, etc)
 app.set('trust proxy', 1);
 
+// Https redirection
+if (process.env.NODE_ENV === 'production') {
+	app.use((req, res, next) => {
+		if (req.header('x-forwarded-proto') !== 'https') {
+			res.redirect('https://' + req.header('host') + req.url);
+		} else {
+			next();
+		}
+	});
+}
+
 // Parse body
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -31,9 +42,13 @@ app.use(express.json());
 app.use(helmet());
 
 // Cors
+app.options('*', cors()); // ???
 app.use(
 	cors({
-		origin: process.env.BASE_URL,
+		origin: [
+			process.env.BASE_URL /* backend */,
+			'http://localhost:3000' /* frontend */,
+		],
 	})
 );
 
@@ -67,6 +82,10 @@ app.use(
 // Route registers
 app.use('/auth', authRoutes);
 app.use('/users', usersRoutes);
+
+// Temp route
+const tempRoutes = require('./temp/temp.routes');
+app.use('/', tempRoutes);
 
 // 404 Route
 app.use('*', (req, res, next) => {

@@ -27,6 +27,10 @@ const registerValidation = (username, age, email, password) => {
 		if (/\W/.test(username)) {
 			errors.push('Username cannot contain any special characters.');
 		}
+
+		if (!/[a-zA-Z]/.test(username)) {
+			errors.push('Username must contain at least one letter.');
+		}
 	}
 
 	if (password === '') {
