@@ -8,8 +8,8 @@ const authLimiter = rateLimit({
 	store: new RedisStore({
 		client,
 	}),
-	windowMs: 5 * 60 * 1000, // 5 minutes
-	max: 10, // limit each IP to 10 requests per windowMs
+	windowMs: 10 * 60 * 1000, // 10 minutes
+	max: 5, // limit each IP to 5 requests per windowMs
 	headers: false,
 	handler: (_req, _res, next) => {
 		return next(createError.TooManyRequests('Too many requests'));

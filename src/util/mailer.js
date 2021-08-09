@@ -1,5 +1,4 @@
 const nodemailer = require('nodemailer');
-const url = require('url');
 
 const { signEmailToken, signResetToken } = require('./jwt');
 

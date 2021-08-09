@@ -74,7 +74,7 @@ const registerValidation = (username, age, email, password) => {
 	return errors;
 };
 
-const updateProfileValidation = (email, age, phoneNumber) => {
+const updateProfileValidation = (email, age) => {
 	const errors = [];
 
 	if (age) {
@@ -86,12 +86,6 @@ const updateProfileValidation = (email, age, phoneNumber) => {
 	if (email) {
 		if (!validator.isEmail(email)) {
 			errors.push('Email adress is not valid.');
-		}
-	}
-
-	if (phoneNumber) {
-		if (!validator.isMobilePhone(phoneNumber)) {
-			errors.push('Phone number is not valid.');
 		}
 	}
 

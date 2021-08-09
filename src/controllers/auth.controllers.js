@@ -1,5 +1,6 @@
 const createError = require('http-errors');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 
 const { signAccessToken, signRefreshToken } = require('../util/jwt');
 const User = require('../models/user.model');
@@ -30,12 +31,14 @@ const putRegister = async (req, res, next) => {
 			});
 		} else {
 			// Check username and email uniqueness
-			const emailCheck = await User.findOne({ 'email.value': email });
+			const emailCheck = await User.findOne({ 'email.value': email })
+				.lean()
+				.exec();
 			if (emailCheck) {
 				throw createError.Conflict('Email already exists.');
 			}
 
-			const usernameCheck = await User.findOne({ username });
+			const usernameCheck = await User.findOne({ username }).lean().exec();
 			if (usernameCheck) {
 				throw createError.Conflict('Username already exists.');
 			}
@@ -58,8 +61,10 @@ const putRegister = async (req, res, next) => {
 		// Send async welcome mail
 		sendWelcomeMail(email, username);
 
-		const accessToken = await signAccessToken(userId);
-		const refreshToken = await signRefreshToken(userId);
+		const [accessToken, refreshToken] = await Promise.all([
+			signAccessToken(userId),
+			signRefreshToken(userId),
+		]);
 
 		return res.status(201).json({
 			success: true,
@@ -90,8 +95,10 @@ const postLogin = async (req, res, next) => {
 			sendVerificationMail(email);
 		}
 
-		const accessToken = await signAccessToken(userId);
-		const refreshToken = await signRefreshToken(userId);
+		const [accessToken, refreshToken] = await Promise.all([
+			signAccessToken(userId),
+			signRefreshToken(userId),
+		]);
 
 		return res.json({
 			success: true,
@@ -169,8 +176,10 @@ const postRefresh = async (req, res, next) => {
 												const userId = rTokenUserId.toString();
 
 												// Generate new tokens
-												const accessToken = await signAccessToken(userId);
-												const refreshToken = await signRefreshToken(userId);
+												const [accessToken, refreshToken] = await Promise.all([
+													signAccessToken(userId),
+													signRefreshToken(userId),
+												]);
 
 												return res.json({
 													success: true,
@@ -404,8 +413,20 @@ const patchReset = async (req, res, next) => {
 						return next(createError.BadRequest('User not found.'));
 					}
 
-					// Update the password of the user
+					// Check if the previous password is the same as the new one
+					const isPassTheSame = await bcrypt.compare(password, user.password);
+
+					if (isPassTheSame) {
+						return next(
+							createError.BadRequest(
+								'New password cannot be same as the old one.'
+							)
+						);
+					}
+
+					// Update the password of the user and make the email verified since it has been used by the user
 					user.password = password;
+					user.email.verified = true;
 					await user.save();
 
 					// Remove the reset token from redis to prevent subsequent use

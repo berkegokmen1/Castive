@@ -65,9 +65,15 @@ userSchema.static('findByCredentials', async (username, email, password) => {
 	let user;
 	try {
 		if (username) {
-			user = await User.findOne({ username }).lean().exec();
+			user = await User.findOne({ username })
+				.select('_id email password')
+				.lean()
+				.exec();
 		} else if (email) {
-			user = await User.findOne({ 'email.value': email }).lean().exec();
+			user = await User.findOne({ 'email.value': email })
+				.select('_id email password')
+				.lean()
+				.exec();
 		}
 
 		if (!user) {

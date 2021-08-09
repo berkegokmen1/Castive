@@ -90,7 +90,7 @@ const patchMe = async (req, res, next) => {
 
 	const { email, age, phoneNumber } = req.body;
 
-	const validationErrors = updateProfileValidation(email, age, phoneNumber);
+	const validationErrors = updateProfileValidation(email, age);
 
 	if (validationErrors.length > 0) {
 		return res.status(400).json({
@@ -122,9 +122,6 @@ const patchMe = async (req, res, next) => {
 		}
 		if (age) {
 			req.user.age = age;
-		}
-		if (phoneNumber) {
-			req.user.phoneNumber.value = phoneNumber;
 		}
 
 		await req.user.save();
@@ -171,14 +168,17 @@ const deleteMe = async (req, res, next) => {
 		next(error);
 	}
 };
-const getUserId = async (req, res, next) => {
+const getUserUsername = async (req, res, next) => {
 	const username = req.params.username;
 	if (!username) {
 		return next(createError.BadRequest('No username specified.'));
 	}
 
 	try {
-		const user = await User.findOne({ username }).lean().exec();
+		const user = await User.findOne({ username })
+			.select('subscription') // Add desired fields
+			.lean()
+			.exec();
 
 		if (!user) {
 			return next(createError.NotFound('User not found.'));
@@ -199,14 +199,14 @@ const getUserId = async (req, res, next) => {
 		next(error);
 	}
 };
-const getUserIdAvatar = async (req, res, next) => {
+const getUserUsernameAvatar = async (req, res, next) => {
 	const username = req.params.username;
 	if (!username) {
 		return next(createError.BadRequest('No username specified.'));
 	}
 
 	try {
-		const user = await User.findOne({ username }).exec();
+		const user = await User.findOne({ username }).select('avatar').exec();
 
 		if (!user) {
 			return next(createError.NotFound('User not found.'));
@@ -230,6 +230,6 @@ module.exports = {
 	deleteMeAvatar,
 	patchMe,
 	deleteMe,
-	getUserId,
-	getUserIdAvatar,
+	getUserUsername,
+	getUserUsernameAvatar,
 };
