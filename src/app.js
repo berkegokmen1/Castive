@@ -34,6 +34,9 @@ if (process.env.NODE_ENV === 'production') {
 			next();
 		}
 	});
+} else {
+	// Logger
+	app.use(morgan('dev'));
 }
 
 // Parse body
@@ -53,9 +56,6 @@ app.use(
 		],
 	})
 );
-
-// Logger
-app.use(morgan(process.env.NODE_ENV === 'dev' ? 'dev' : 'short'));
 
 // Prevent against nosql query injection attacks
 app.use(
