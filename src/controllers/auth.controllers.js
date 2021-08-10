@@ -459,7 +459,6 @@ const patchReset = async (req, res, next) => {
 
 							client.DEL(toBeRemoved, async (err, reply) => {
 								if (err) {
-									console.log(err);
 									return next(createError.InternalServerError());
 								}
 
