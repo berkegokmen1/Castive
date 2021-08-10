@@ -3,6 +3,12 @@ const createError = require('http-errors');
 
 const client = require('../db/redis.db');
 
+const ACCESS_EXPIRATION = parseInt(process.env.JWT_ACCESS_EXPIRATION); // 5 mins
+const REFRESH_EXPIRATION = parseInt(process.env.JWT_REFRESH_EXPIRATION); // 1 year
+const RESET_PASSWORD_EXPIRATION = parseInt(
+	process.env.JWT_RESET_PASSWORD_EXPIRATION
+); // 15mins
+
 /**
  * Store jwt tokens in http-only cookies => does not allow access or modification to token
  * Storing in local storage => X
@@ -14,7 +20,7 @@ const signAccessToken = (userId) => {
 			{},
 			process.env.JWT_ACCESS_SECRET,
 			{
-				expiresIn: process.env.JWT_ACCESS_EXPIRATION,
+				expiresIn: ACCESS_EXPIRATION,
 				issuer: process.env.JWT_ISSUER,
 				audience: userId,
 			},
@@ -27,7 +33,7 @@ const signAccessToken = (userId) => {
 					`AT:${token}:${userId}`,
 					1,
 					'EX' /* expiration */,
-					5 * 60 /* seconds */,
+					ACCESS_EXPIRATION /* seconds */,
 					(err, reply) => {
 						if (err) {
 							return reject(createError.InternalServerError());
@@ -47,7 +53,7 @@ const signRefreshToken = (userId) => {
 			{},
 			process.env.JWT_REFRESH_SECRET,
 			{
-				expiresIn: process.env.JWT_REFRESH_EXPIRATION,
+				expiresIn: REFRESH_EXPIRATION,
 				issuer: process.env.JWT_ISSUER,
 				audience: userId,
 			},
@@ -60,7 +66,7 @@ const signRefreshToken = (userId) => {
 					`RT:${token}:${userId}`,
 					1,
 					'EX' /* expiration */,
-					365 * 24 * 60 * 60 /* seconds */,
+					REFRESH_EXPIRATION /* seconds */,
 					(err, reply) => {
 						if (err) {
 							return reject(createError.InternalServerError());
@@ -100,7 +106,7 @@ const signResetToken = (email) => {
 			{},
 			process.env.JWT_RESET_PASSWORD_SECRET,
 			{
-				expiresIn: process.env.JWT_RESET_PASSWORD_EXPIRATION,
+				expiresIn: RESET_PASSWORD_EXPIRATION,
 				issuer: process.env.JWT_ISSUER,
 				audience: email,
 			},
@@ -113,7 +119,7 @@ const signResetToken = (email) => {
 					`RESET:${token}`,
 					1,
 					'EX' /* expiration */,
-					15 * 60 /* seconds */,
+					RESET_PASSWORD_EXPIRATION /* seconds */,
 					(err, reply) => {
 						if (err) {
 							return reject(createError.InternalServerError());
