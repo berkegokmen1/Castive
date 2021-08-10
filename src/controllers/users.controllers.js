@@ -168,12 +168,12 @@ const deleteMe = async (req, res, next) => {
 	}
 };
 const getUserUsername = async (req, res, next) => {
-	const username = req.params.username;
-	if (!username) {
+	if (!req.params.username) {
 		return next(createError.BadRequest('No username specified.'));
 	}
 
 	try {
+		const username = req.params.username;
 		const user = await User.findOne({ username })
 			.select('subscription') // Add desired fields
 			.lean()
@@ -183,12 +183,12 @@ const getUserUsername = async (req, res, next) => {
 			return next(createError.NotFound('User not found.'));
 		}
 
-		const { username, subscription } = user;
+		const { subscription } = user;
 
 		return res.json({
 			success: true,
 			Data: {
-				username,
+				username: username,
 				subscription: {
 					status: subscription.status,
 				},
@@ -199,13 +199,13 @@ const getUserUsername = async (req, res, next) => {
 	}
 };
 const getUserUsernameAvatar = async (req, res, next) => {
-	const username = req.params.username;
-	if (!username) {
+	if (!req.params.username) {
 		return next(createError.BadRequest('No username specified.'));
 	}
 
 	try {
-		const user = await User.findOne({ username }).select('avatar').exec();
+		const username = req.params.username;
+		const user = await User.findOne({ username }).select('avatar').exec(); // .lean() => does not work with binary for some reason
 
 		if (!user) {
 			return next(createError.NotFound('User not found.'));
