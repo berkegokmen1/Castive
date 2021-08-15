@@ -26,7 +26,7 @@ const auth = async (req, res, next) => {
 				return next(createError.Unauthorized());
 			}
 
-			client.GET(`AT:${accessToken}:${user.id}`, (err, reply) => {
+			client.GET(`AT:${accessToken}:${user._id.toString()}`, (err, reply) => {
 				if (err) {
 					return next(createError.InternalServerError());
 				}

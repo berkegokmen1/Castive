@@ -2,6 +2,8 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const createError = require('http-errors');
 
+const List = require('./list.model');
+
 const userSchema = new mongoose.Schema(
 	{
 		username: {
@@ -11,10 +13,6 @@ const userSchema = new mongoose.Schema(
 			unique: true,
 			minlength: 2,
 			maxlength: 16,
-		},
-		age: {
-			type: Number,
-			default: 0,
 		},
 		email: {
 			value: {
@@ -40,6 +38,22 @@ const userSchema = new mongoose.Schema(
 			type: Buffer,
 			default: undefined,
 		},
+		following: [
+			{
+				type: mongoose.Schema.Types.ObjectId,
+				ref: 'User',
+				default: [],
+				required: true,
+			},
+		],
+		blocked: [
+			{
+				type: mongoose.Schema.Types.ObjectId,
+				ref: 'User',
+				default: [],
+				required: true,
+			},
+		],
 		subscription: {
 			status: {
 				type: String,
@@ -57,8 +71,81 @@ const userSchema = new mongoose.Schema(
 	{
 		timestamps: true,
 		versionKey: false,
+		id: false,
+		toJSON: {
+			virtuals: true,
+		},
+		toObject: {
+			virtuals: true,
+		},
 	}
 );
+
+/******************************
+ * FOLLOWER METHODS
+ ******************************/
+
+userSchema.virtual('followers', {
+	ref: 'User',
+	localField: '_id',
+	foreignField: 'following',
+	options: {
+		sort: {
+			createdAt: -1,
+		},
+	},
+});
+
+userSchema.virtual('numFollowers', {
+	ref: 'User',
+	localField: '_id',
+	foreignField: 'following',
+	count: true,
+});
+
+userSchema.virtual('numFollowing').get(function () {
+	if (this.following) {
+		return this.following.length;
+	}
+});
+
+/******************************
+ * LIST METHODS
+ ******************************/
+
+userSchema.virtual('lists', {
+	ref: 'List',
+	localField: '_id',
+	foreignField: 'owner',
+	options: {
+		sort: {
+			createdAt: -1,
+		},
+	},
+});
+
+userSchema.method('addList', async function (title, private) {
+	const user = this;
+
+	try {
+		const list = new List({
+			title,
+			owner: user._id,
+			private: private || false,
+		});
+
+		await list.save();
+
+		return list;
+	} catch (error) {
+		console.log(error);
+		throw createError.InternalServerError();
+	}
+});
+
+/******************************
+ * SCHEMA METHODS
+ ******************************/
 
 userSchema.static('findByCredentials', async (username, email, password) => {
 	let user;
@@ -87,9 +174,13 @@ userSchema.static('findByCredentials', async (username, email, password) => {
 
 		return user;
 	} catch (error) {
-		throw error;
+		throw createError.InternalServerError();
 	}
 });
+
+/******************************
+ * SCHEMA MIDDLEWARES
+ ******************************/
 
 userSchema.pre('save', async function (next) {
 	try {
@@ -99,7 +190,7 @@ userSchema.pre('save', async function (next) {
 		}
 		next();
 	} catch (error) {
-		throw new Error(error);
+		throw createError.InternalServerError();
 	}
 });
 

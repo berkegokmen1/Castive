@@ -1,8 +1,7 @@
 const validator = require('validator');
 
-const registerValidation = (username, age, email, password) => {
+const registerValidation = (username, email, password) => {
 	// username => no special chars, min 2, max 16, no white space
-	// age => greater than or equal to 0
 	// email => valid email
 	// password => 1 uppercase, 1 lowercase, min 6, max 25, 1 special char, no white space, no username
 	// password, password2 => matching
@@ -67,10 +66,6 @@ const registerValidation = (username, age, email, password) => {
 		}
 	}
 
-	if (age < 0) {
-		errors.push('Age cannot be less than 0.');
-	}
-
 	if (!validator.isEmail(email)) {
 		errors.push('Email adress is not valid.');
 	}
@@ -78,14 +73,8 @@ const registerValidation = (username, age, email, password) => {
 	return errors;
 };
 
-const updateProfileValidation = (email, age) => {
+const updateProfileValidation = (email) => {
 	const errors = [];
-
-	if (age) {
-		if (age < 0) {
-			errors.push('Age cannot be less than 0.');
-		}
-	}
 
 	if (email) {
 		if (!validator.isEmail(email)) {

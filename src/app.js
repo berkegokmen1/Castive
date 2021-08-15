@@ -15,6 +15,7 @@ const createError = require('http-errors');
 // Route imports
 const authRoutes = require('./routes/auth.routes');
 const usersRoutes = require('./routes/users.routes');
+const listsRoutes = require('./routes/lists.routes');
 
 const connectMongoose = require('./db/mongoose.db');
 
@@ -84,6 +85,7 @@ app.use(
 // Route registers
 app.use('/auth', authRoutes);
 app.use('/users', usersRoutes);
+app.use('/lists', listsRoutes);
 
 // Temp route
 const tempRoutes = require('./temp/temp.routes');
@@ -121,6 +123,7 @@ connectMongoose()
 
 		const PORT = process.env.PORT || 4000;
 		app.listen(PORT, (_) => {
+			require('./playground/mongoose.playground')();
 			console.log('Server is up and running on port', PORT);
 		});
 	})

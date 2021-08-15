@@ -1,5 +1,6 @@
 const express = require('express');
 const multer = require('multer');
+const createError = require('http-errors');
 
 const auth = require('../middlewares/check-auth');
 
@@ -12,7 +13,9 @@ const upload = multer({
 	},
 	fileFilter(req, file, cb) {
 		if (!file.originalname.match(/\.(jpg|jpeg|png)$/)) {
-			return cb(new Error('Please upload a supported format.'));
+			return cb(
+				createError.BadRequest('Please upload a supported image format.')
+			);
 		}
 
 		cb(undefined, true);
@@ -28,6 +31,10 @@ const {
 	deleteMe,
 	getUserUsername,
 	getUserUsernameAvatar,
+	postFollow,
+	postUnfollow,
+	postBlock,
+	postUnblock,
 } = require('../controllers/users.controllers');
 
 // Routes => /users
@@ -46,5 +53,13 @@ router.delete('/me', auth, deleteMe); // Delete account of logged in user
 router.get('/:username', auth, getUserUsername); // Public profile of another user
 
 router.get('/:username/avatar', auth, getUserUsernameAvatar); // Avatar of another profile
+
+router.post('/follow', auth, postFollow); // /follow?username=berkegokmen1
+
+router.post('/unfollow', auth, postUnfollow); // /unfollow?username=berkegokmen1
+
+router.post('/block', auth, postBlock); // /block?username=berkegokmen1
+
+router.post('/unblock', auth, postUnblock); // /unblock?username=berkegokmen1
 
 module.exports = router;

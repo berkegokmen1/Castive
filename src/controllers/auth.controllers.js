@@ -18,8 +18,8 @@ const {
 
 const putRegister = async (req, res, next) => {
 	try {
-		const { username, age, email, password } = req.body;
-		const validationErrors = registerValidation(username, age, email, password);
+		const { username, email, password } = req.body;
+		const validationErrors = registerValidation(username, email, password);
 
 		if (validationErrors.length > 0) {
 			return res.status(400).json({
@@ -50,7 +50,6 @@ const putRegister = async (req, res, next) => {
 
 		const newUser = new User({
 			username,
-			age,
 			'email.value': email,
 			password,
 		});

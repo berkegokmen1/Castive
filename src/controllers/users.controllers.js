@@ -6,18 +6,22 @@ const { updateProfileValidation } = require('../util/formValidation');
 const client = require('../db/redis.db');
 const { sendVerificationMail } = require('../util/mailer');
 
-const getMe = (req, res, next) => {
+const getMe = async (req, res, next) => {
 	try {
-		const { _id, username, email, phoneNumber, subscription } = req.user;
+		const user = req.user;
+
+		const result = await user
+			.populate('following', 'username -_id')
+			.populate('blocked', 'username -_id')
+			.populate('lists', 'title createdAt')
+			.populate('followers', 'username -_id -following')
+			.populate('numFollowers')
+			.execPopulate();
 
 		return res.json({
 			success: true,
 			Data: {
-				_id,
-				username,
-				email,
-				phoneNumber,
-				subscription,
+				user: result,
 			},
 		});
 	} catch (error) {
@@ -175,23 +179,25 @@ const getUserUsername = async (req, res, next) => {
 	try {
 		const username = req.params.username;
 		const user = await User.findOne({ username })
-			.select('subscription') // Add desired fields
-			.lean()
+			.select('username subscription.status blocked') // Add desired fields
+			.populate('following', 'username -_id')
+			.populate('lists', 'title createdAt')
+			.populate('followers', 'username -_id')
+			.populate('numFollowers')
 			.exec();
 
 		if (!user) {
 			return next(createError.NotFound('User not found.'));
 		}
 
-		const { subscription } = user;
+		if (user.blocked.indexOf(req.user._id) > -1) {
+			return next(createError.Forbidden('Blocked.'));
+		}
 
 		return res.json({
 			success: true,
 			Data: {
-				username: username,
-				subscription: {
-					status: subscription.status,
-				},
+				user,
 			},
 		});
 	} catch (error) {
@@ -205,10 +211,16 @@ const getUserUsernameAvatar = async (req, res, next) => {
 
 	try {
 		const username = req.params.username;
-		const user = await User.findOne({ username }).select('avatar').exec(); // .lean() => does not work with binary for some reason
+		const user = await User.findOne({ username })
+			.select('avatar blocked')
+			.exec(); // .lean() => does not work with binary for some reason
 
 		if (!user) {
 			return next(createError.NotFound('User not found.'));
+		}
+
+		if (user.blocked.indexOf(req.user._id) > -1) {
+			return next(createError.Forbidden('Blocked.'));
 		}
 
 		if (!user.avatar) {
@@ -217,6 +229,183 @@ const getUserUsernameAvatar = async (req, res, next) => {
 
 		res.set('Content-Type', 'image/png');
 		return res.send(user.avatar);
+	} catch (error) {
+		return next(error);
+	}
+};
+
+const postFollow = async (req, res, next) => {
+	if (!req.query.username) {
+		return next(createError.BadRequest('No username specified.'));
+	}
+
+	try {
+		const user = req.user;
+		const username = req.query.username;
+
+		if (user.username === username) {
+			return next(createError.BadRequest());
+		}
+
+		const userToUse = await User.findOne({ username })
+			.select('_id blocked')
+			.exec();
+
+		if (!userToUse) {
+			return next(createError.NotFound('User not found.'));
+		}
+
+		if (userToUse.blocked.indexOf(user._id) !== -1) {
+			return next(createError.Forbidden('Blocked.'));
+		}
+
+		if (user.following.indexOf(userToUse._id) > -1) {
+			return next(createError.BadRequest(`Already following ${username}.`));
+		}
+
+		user.following.push(userToUse._id);
+
+		await user.save();
+
+		return res.json({
+			success: true,
+			Data: {
+				message: `Following ${username}.`,
+			},
+		});
+	} catch (error) {
+		return next(error);
+	}
+};
+
+const postUnfollow = async (req, res, next) => {
+	if (!req.query.username) {
+		return next(createError.BadRequest('No username specified.'));
+	}
+
+	try {
+		const user = req.user;
+		const username = req.query.username;
+
+		if (user.username === username) {
+			return next(createError.BadRequest());
+		}
+
+		const userToUse = await User.findOne({ username })
+			.select('_id blocked')
+			.exec();
+
+		if (!userToUse) {
+			return next(createError.NotFound('User not found.'));
+		}
+
+		if (userToUse.blocked.indexOf(user._id) > -1) {
+			return next(createError.Forbidden('Blocked.'));
+		}
+
+		// Check the userToUse id in the user following list
+		const index = user.following.indexOf(userToUse._id);
+
+		if (index === -1) {
+			return next(createError.BadRequest(`Already not following ${username}`));
+		}
+
+		// Remove userToUse id from user following list
+		user.following.splice(index, 1);
+
+		await user.save();
+
+		return res.json({
+			success: true,
+			Data: {
+				message: `Unfollowed ${username}.`,
+			},
+		});
+	} catch (error) {
+		return next(error);
+	}
+};
+
+const postBlock = async (req, res, next) => {
+	if (!req.query.username) {
+		return next(createError.BadRequest('No username specified.'));
+	}
+
+	try {
+		const user = req.user;
+		const username = req.query.username;
+
+		if (user.username === username) {
+			return next(createError.BadRequest());
+		}
+
+		const userToUse = await User.findOne({ username })
+			.select('_id')
+			.lean()
+			.exec();
+
+		if (!userToUse) {
+			return next(createError.NotFound('User not found.'));
+		}
+
+		if (user.blocked.indexOf(userToUse._id) !== -1) {
+			return next(createError.BadRequest(`${username} is already blocked.`));
+		}
+
+		user.blocked.push(userToUse._id);
+
+		await user.save();
+
+		return res.json({
+			success: true,
+			Data: {
+				message: `Blocked ${username}.`,
+			},
+		});
+	} catch (error) {
+		return next(error);
+	}
+};
+
+const postUnblock = async (req, res, next) => {
+	if (!req.query.username) {
+		return next(createError.BadRequest('No username specified.'));
+	}
+
+	try {
+		const user = req.user;
+		const username = req.query.username;
+
+		if (user.username === username) {
+			return next(createError.BadRequest());
+		}
+
+		const userToUse = await User.findOne({ username })
+			.select('_id')
+			.lean()
+			.exec();
+
+		if (!userToUse) {
+			return next(createError.NotFound('User not found.'));
+		}
+
+		const index = user.blocked.indexOf(userToUse._id);
+
+		if (index === -1) {
+			return next(createError.BadRequest(`${username} is not blocked.`));
+		}
+
+		// Remove userToUse id from user blocked list
+		user.blocked.splice(index, 1);
+
+		await user.save();
+
+		return res.json({
+			success: true,
+			Data: {
+				message: `Unblocked ${username}.`,
+			},
+		});
 	} catch (error) {
 		return next(error);
 	}
@@ -231,4 +420,8 @@ module.exports = {
 	deleteMe,
 	getUserUsername,
 	getUserUsernameAvatar,
+	postFollow,
+	postUnfollow,
+	postBlock,
+	postUnblock,
 };
