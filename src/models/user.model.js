@@ -54,6 +54,14 @@ const userSchema = new mongoose.Schema(
 				required: true,
 			},
 		],
+		library: [
+			{
+				type: mongoose.Schema.Types.ObjectId,
+				ref: 'List',
+				default: [],
+				required: true,
+			},
+		],
 		subscription: {
 			status: {
 				type: String,
@@ -69,7 +77,10 @@ const userSchema = new mongoose.Schema(
 		},
 	},
 	{
-		timestamps: true,
+		timestamps: {
+			createdAt: true,
+			updatedAt: false,
+		},
 		versionKey: false,
 		id: false,
 		toJSON: {
@@ -124,24 +135,28 @@ userSchema.virtual('lists', {
 	},
 });
 
-userSchema.method('addList', async function (title, private) {
-	const user = this;
+userSchema.method(
+	'addList',
+	async function (title, description, private, items) {
+		const user = this;
 
-	try {
-		const list = new List({
-			title,
-			owner: user._id,
-			private: private || false,
-		});
+		try {
+			const list = new List({
+				title,
+				owner: user._id,
+				description: description || '',
+				private: private || false,
+				items: items || [],
+			});
 
-		await list.save();
+			await list.save();
 
-		return list;
-	} catch (error) {
-		console.log(error);
-		throw createError.InternalServerError();
+			return list;
+		} catch (error) {
+			throw error;
+		}
 	}
-});
+);
 
 /******************************
  * SCHEMA METHODS
@@ -164,17 +179,17 @@ userSchema.static('findByCredentials', async (username, email, password) => {
 
 		if (!user) {
 			throw createError.Forbidden('User not found.');
+		} else {
+			const passCheck = await bcrypt.compare(password, user.password);
+
+			if (!passCheck) {
+				throw createError.BadRequest('Invalid credentials.');
+			}
+
+			return user;
 		}
-
-		const passCheck = await bcrypt.compare(password, user.password);
-
-		if (!passCheck) {
-			throw createError.BadRequest('Invalid credentials.');
-		}
-
-		return user;
 	} catch (error) {
-		throw createError.InternalServerError();
+		throw error;
 	}
 });
 
@@ -196,12 +211,14 @@ userSchema.pre('save', async function (next) {
 
 userSchema.pre('remove', async function (next) {
 	try {
+		const user = this;
+
+		await List.deleteMany({ owner: user._id }).exec();
+
+		next();
 	} catch (error) {
-		throw new Error(error);
+		throw error;
 	}
-	const user = this;
-	// Remove playlists
-	next();
 });
 
 const User = mongoose.model('User', userSchema);

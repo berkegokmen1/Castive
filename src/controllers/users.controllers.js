@@ -2,27 +2,59 @@ const User = require('../models/user.model');
 const sharp = require('sharp');
 const createError = require('http-errors');
 
-const { updateProfileValidation } = require('../util/formValidation');
+const checkQuery = require('../util/checkQuery');
 const client = require('../db/redis.db');
-const { sendVerificationMail } = require('../util/mailer');
 
 const getMe = async (req, res, next) => {
 	try {
 		const user = req.user;
 
-		const result = await user
-			.populate('following', 'username -_id')
-			.populate('blocked', 'username -_id')
-			.populate('lists', 'title createdAt')
-			.populate('followers', 'username -_id -following')
-			.populate('numFollowers')
-			.execPopulate();
+		let result = user;
+
+		if (checkQuery(req.query.all)) {
+			result = await user
+				.populate('following', 'username -_id')
+				.populate('blocked', 'username -_id')
+				.populate('lists', 'title createdAt')
+				.populate('library', '_id title')
+				.populate('followers', 'username -_id -following')
+				.populate('numFollowers')
+				.execPopulate();
+		} else {
+			result = await user.populate('numFollowers').execPopulate();
+
+			if (checkQuery(req.query.following)) {
+				result = await result
+					.populate('following', 'username -_id')
+					.execPopulate();
+			}
+
+			if (checkQuery(req.query.followers)) {
+				result = await result
+					.populate('followers', 'username -_id -following')
+					.execPopulate();
+			}
+
+			if (checkQuery(req.query.lists)) {
+				result = await result
+					.populate('lists', 'title createdAt')
+					.execPopulate();
+			}
+
+			if (checkQuery(req.query.blocked)) {
+				result = await result
+					.populate('blocked', 'username -_id')
+					.execPopulate();
+			}
+
+			if (checkQuery(req.query.library)) {
+				result = await result.populate('library', '_id title').execPopulate();
+			}
+		}
 
 		return res.json({
 			success: true,
-			Data: {
-				user: result,
-			},
+			Data: result,
 		});
 	} catch (error) {
 		return next(error);
@@ -36,7 +68,7 @@ const getMeAvatar = (req, res, next) => {
 		}
 
 		res.set('Content-Type', 'image/png');
-		res.send(req.user.avatar);
+		return res.send(req.user.avatar);
 	} catch (error) {
 		return next(error);
 	}
@@ -84,66 +116,7 @@ const deleteMeAvatar = async (req, res, next) => {
 };
 
 // Has some work to do
-const patchMe = async (req, res, next) => {
-	const updates = Object.keys(req.body);
-	const allowedUpdates = ['email', 'age'];
-	const isValid = updates.every((update) => allowedUpdates.includes(update));
-	if (!isValid) {
-		return next(createError.BadRequest('Invalid operation(s).'));
-	}
-
-	const { email, age } = req.body;
-
-	const validationErrors = updateProfileValidation(email, age);
-
-	if (validationErrors.length > 0) {
-		return res.status(400).json({
-			success: false,
-			Data: {
-				error: 'Validation Errors',
-				validationErrors,
-			},
-		});
-	}
-
-	try {
-		// Check username and email uniqueness
-		const emailCheck = await User.findOne({ 'email.value': email })
-			.lean()
-			.exec();
-		if (emailCheck) {
-			return next(createError.Conflict('Email already exists.'));
-		}
-	} catch (error) {
-		return next(error);
-	}
-
-	try {
-		if (email) {
-			req.user.email.value = email;
-			req.user.email.verified = false;
-			sendVerificationMail(email);
-		}
-		if (age) {
-			req.user.age = age;
-		}
-
-		await req.user.save();
-
-		return res.json({
-			success: true,
-			Data: {
-				message: 'Updated profile.',
-				updatedFields: {
-					email,
-					age,
-				},
-			},
-		});
-	} catch (error) {
-		return next(error);
-	}
-};
+const patchMe = async (req, res, next) => {};
 
 const deleteMe = async (req, res, next) => {
 	try {
@@ -178,11 +151,11 @@ const getUserUsername = async (req, res, next) => {
 
 	try {
 		const username = req.params.username;
-		const user = await User.findOne({ username })
-			.select('username subscription.status blocked') // Add desired fields
-			.populate('following', 'username -_id')
-			.populate('lists', 'title createdAt')
-			.populate('followers', 'username -_id')
+
+		let user;
+
+		user = await User.findOne({ username })
+			.select('username subscription.status blocked following numFollowing')
 			.populate('numFollowers')
 			.exec();
 
@@ -191,14 +164,44 @@ const getUserUsername = async (req, res, next) => {
 		}
 
 		if (user.blocked.indexOf(req.user._id) > -1) {
-			return next(createError.Forbidden('Blocked.'));
+			return next(createError.Forbidden());
 		}
+
+		if (checkQuery(req.query.all)) {
+			user = await user
+				.populate('following', 'username -_id')
+				.populate('lists', 'title createdAt')
+				.populate('followers', 'username -_id')
+				.populate('numFollowers')
+				.populate('library', '_id title')
+				.execPopulate();
+		} else {
+			if (checkQuery(req.query.following)) {
+				user = await user.populate('following', 'username -_id').execPopulate();
+			}
+
+			if (checkQuery(req.query.followers)) {
+				user = await user
+					.populate('followers', 'username -_id -following')
+					.execPopulate();
+			}
+
+			if (checkQuery(req.query.lists)) {
+				user = await user
+					.populate({
+						path: 'lists',
+						match: { private: false },
+						select: 'title createdAt',
+					})
+					.execPopulate();
+			}
+		}
+
+		const { blocked, ...rest } = user.toJSON();
 
 		return res.json({
 			success: true,
-			Data: {
-				user,
-			},
+			Data: rest,
 		});
 	} catch (error) {
 		next(error);

@@ -38,7 +38,7 @@ const {
 } = require('../controllers/users.controllers');
 
 // Routes => /users
-router.get('/me', auth, getMe); // Profile of logged id user
+router.get('/me', auth, getMe); // /users/me?all=1 or /users/me?following=1&followers=0&lists=true&blocked=false&library=1
 
 router.get('/me/avatar', auth, getMeAvatar); // Avatar of logged in user
 
@@ -50,7 +50,7 @@ router.patch('/me', auth, patchMe); // Update logged in user's profile
 
 router.delete('/me', auth, deleteMe); // Delete account of logged in user
 
-router.get('/:username', auth, getUserUsername); // Public profile of another user
+router.get('/:username', auth, getUserUsername); // /users/:id?following=1&followers=0&lists=true
 
 router.get('/:username/avatar', auth, getUserUsernameAvatar); // Avatar of another profile
 

@@ -8,7 +8,7 @@ const transporter = nodemailer.createTransport({
 		user: process.env.MAILER_USER,
 		pass: process.env.MAILER_PASS,
 	},
-	logger: process.env.NODE_ENV === 'dev',
+	logger: false,
 });
 
 const sendVerificationMail = async (email) => {
@@ -57,9 +57,9 @@ const sendWelcomeMail = (email, username) => {
 	transporter.sendMail({
 		from: 'no-reply@castive.me',
 		to: email,
-		subject: 'Welcome to Castive!',
+		subject: `Welcome to Castive ${username}!`,
 		html: `
-			<h1>Welcome to Castive!</h1>
+			<h1>Welcome to Castive ${username}!</h1>
 			<p>Start building your playlists and sharing!</p>
 			`,
 		text: '',

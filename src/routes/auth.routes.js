@@ -31,13 +31,13 @@ router.post('/logoutall', auth, postLogoutAll);
 
 router.patch('/verify', patchVerifyEmail);
 
-router.patch('/reset', patchReset);
-
 router.post(
 	'/request/verification',
 	requestMailLimiter,
 	postRequestVerificationMail
 );
+
+router.patch('/reset', patchReset);
 
 router.post('/request/reset', requestMailLimiter, postRequestResetMail);
 

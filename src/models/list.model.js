@@ -37,11 +37,42 @@ const listSchema = new mongoose.Schema(
 		],
 	},
 	{
-		timestamps: true,
+		timestamps: {
+			createdAt: true,
+			updatedAt: false,
+		},
 		versionKey: false,
 		id: false,
+		toJSON: {
+			virtuals: true,
+		},
+		toObject: {
+			virtuals: true,
+		},
 	}
 );
+
+/******************************
+ * FOLLOWER METHODS
+ ******************************/
+
+listSchema.virtual('followers', {
+	ref: 'User',
+	localField: '_id',
+	foreignField: 'library',
+	options: {
+		sort: {
+			createdAt: -1,
+		},
+	},
+});
+
+listSchema.virtual('numFollowers', {
+	ref: 'User',
+	localField: '_id',
+	foreignField: 'library',
+	count: true,
+});
 
 const List = mongoose.model('List', listSchema);
 
