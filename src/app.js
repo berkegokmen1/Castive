@@ -123,7 +123,6 @@ connectMongoose()
 
 		const PORT = process.env.PORT || 4000;
 		app.listen(PORT, (_) => {
-			require('./playground/mongoose.playground')();
 			console.log('Server is up and running on port', PORT);
 		});
 	})
