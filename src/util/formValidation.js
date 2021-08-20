@@ -1,6 +1,6 @@
 const validator = require('validator');
 
-const registerValidation = (username, email, password) => {
+const registerValidation = (username, email, password, birthdate) => {
 	// username => no special chars, min 2, max 16, no white space
 	// email => valid email
 	// password => 1 uppercase, 1 lowercase, min 6, max 25, 1 special char, no white space, no username
@@ -80,6 +80,10 @@ const registerValidation = (username, email, password) => {
 		if (!validator.isEmail(email)) {
 			errors.push('Email adress is not valid.');
 		}
+	}
+
+	if (!validator.isDate(birthdate)) {
+		errors.push('Please enter a valid date format.');
 	}
 
 	return errors;

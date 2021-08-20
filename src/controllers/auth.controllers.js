@@ -18,8 +18,13 @@ const {
 
 const putRegister = async (req, res, next) => {
 	try {
-		const { username, email, password } = req.body;
-		const validationErrors = registerValidation(username, email, password);
+		const { username, email, password, birthdate } = req.body;
+		const validationErrors = registerValidation(
+			username,
+			email,
+			password,
+			birthdate
+		);
 
 		if (validationErrors.length > 0) {
 			return res.status(400).json({
@@ -52,7 +57,14 @@ const putRegister = async (req, res, next) => {
 			username,
 			'email.value': email,
 			password,
+			birthdate,
 		});
+
+		if (newUser.age < 13) {
+			return next(
+				createError.Forbidden('Users under the age of 13 are not allowed.')
+			);
+		}
 
 		const userId = newUser._id.toString();
 

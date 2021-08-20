@@ -34,6 +34,10 @@ const userSchema = new mongoose.Schema(
 			trim: true,
 			minlength: 6,
 		},
+		birthdate: {
+			type: Date,
+			required: true,
+		},
 		avatar: {
 			type: Buffer,
 			default: undefined,
@@ -91,6 +95,16 @@ const userSchema = new mongoose.Schema(
 		},
 	}
 );
+
+/******************************
+ * PROPERTY METHODS
+ ******************************/
+
+userSchema.virtual('age').get(function () {
+	return Math.floor(
+		(Date.now() - this.birthdate.getTime()) / (1000 * 3600 * 24 * 365)
+	);
+});
 
 /******************************
  * FOLLOWER METHODS
