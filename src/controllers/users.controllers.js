@@ -4,6 +4,7 @@ const createError = require('http-errors');
 
 const checkQuery = require('../util/checkQuery');
 const client = require('../db/redis.db');
+const checkGenreIds = require('../util/checkGenreIds');
 
 const getMe = async (req, res, next) => {
 	try {
@@ -112,6 +113,128 @@ const deleteMeAvatar = async (req, res, next) => {
 		});
 	} catch (error) {
 		return next(error);
+	}
+};
+
+const getMeInterests = async (req, res, next) => {
+	try {
+		return res.json({
+			success: true,
+			Data: req.user.interests,
+		});
+	} catch (error) {
+		next(error);
+	}
+};
+
+const postMeInterests = async (req, res, next) => {
+	// /me/inserests/:type/:incexc
+	try {
+		const { type, incexc } = req.params;
+		const { ids } = req.body;
+
+		if (!type || !incexc) {
+			return next(
+				createError.BadRequest('Please provide both type and include/exclude.')
+			);
+		}
+
+		if (type.toLowerCase() !== 'tv' && type.toLowerCase() !== 'movie') {
+			return next(createError.BadRequest("Type must be 'tv' or 'movie'"));
+		}
+
+		if (
+			incexc.toLowerCase() !== 'include' &&
+			incexc.toLowerCase() !== 'exclude'
+		) {
+			return next(
+				createError.BadRequest("Last param must be 'include' or 'exclude'")
+			);
+		}
+
+		if (!ids) {
+			return next(createError.BadRequest('Please provide ids.'));
+		}
+
+		if (!checkGenreIds(ids)) {
+			return next(
+				createError.BadRequest('ids should be an array of integers.')
+			);
+		}
+
+		const temp = req.user.interests[type][incexc];
+
+		// Concat two arrays without duplicates
+		for (var i = 0; i < ids.length; i++) {
+			if (temp.indexOf(ids[i]) === -1) {
+				temp.push(ids[i]);
+			}
+		}
+
+		req.user.interests[type][incexc] = temp;
+
+		await req.user.save();
+
+		return res.json({
+			success: true,
+			Data: {
+				message: 'Ids have been added.',
+			},
+		});
+	} catch (error) {
+		next(error);
+	}
+};
+
+const deleteMeInterests = async (req, res, next) => {
+	// /me/inserests/:type/:incexc
+	try {
+		const { type, incexc } = req.params;
+		const { ids } = req.body;
+
+		if (!type || !incexc) {
+			return next(
+				createError.BadRequest('Please provide both type and include/exclude.')
+			);
+		}
+
+		if (type.toLowerCase() !== 'tv' && type.toLowerCase() !== 'movie') {
+			return next(createError.BadRequest("Type must be 'tv' or 'movie'"));
+		}
+
+		if (
+			incexc.toLowerCase() !== 'include' &&
+			incexc.toLowerCase() !== 'exclude'
+		) {
+			return next(
+				createError.BadRequest("Last param must be 'include' or 'exclude'")
+			);
+		}
+
+		if (!ids) {
+			return next(createError.BadRequest('Please provide ids.'));
+		}
+
+		if (!checkGenreIds(ids)) {
+			return next(
+				createError.BadRequest('ids should be an array of integers.')
+			);
+		}
+
+		const temp = req.user.interests[type][incexc];
+
+		req.user.interests[type][incexc] = temp.filter((id) => !ids.includes(id));
+
+		await req.user.save();
+
+		return res.json({
+			success: true,
+			Data: {
+				message: 'Ids have been removed.',
+			},
+		});
+	} catch (error) {
+		next(error);
 	}
 };
 
@@ -419,6 +542,9 @@ module.exports = {
 	getMeAvatar,
 	putMeAvatar,
 	deleteMeAvatar,
+	getMeInterests,
+	postMeInterests,
+	deleteMeInterests,
 	patchMe,
 	deleteMe,
 	getUserUsername,

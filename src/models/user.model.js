@@ -44,7 +44,7 @@ const userSchema = new mongoose.Schema(
 		},
 		following: [
 			{
-				type: mongoose.Schema.Types.ObjectId,
+				type: [mongoose.Schema.Types.ObjectId],
 				ref: 'User',
 				default: [],
 				required: true,
@@ -52,7 +52,7 @@ const userSchema = new mongoose.Schema(
 		],
 		blocked: [
 			{
-				type: mongoose.Schema.Types.ObjectId,
+				type: [mongoose.Schema.Types.ObjectId],
 				ref: 'User',
 				default: [],
 				required: true,
@@ -60,12 +60,38 @@ const userSchema = new mongoose.Schema(
 		],
 		library: [
 			{
-				type: mongoose.Schema.Types.ObjectId,
+				type: [mongoose.Schema.Types.ObjectId],
 				ref: 'List',
 				default: [],
 				required: true,
 			},
 		],
+		interests: {
+			tv: {
+				include: {
+					type: [Number],
+					required: true,
+					default: [],
+				},
+				exclude: {
+					type: [Number],
+					required: true,
+					default: [],
+				},
+			},
+			movie: {
+				include: {
+					type: [Number],
+					required: true,
+					default: [],
+				},
+				exclude: {
+					type: [Number],
+					required: true,
+					default: [],
+				},
+			},
+		},
 		subscription: {
 			status: {
 				type: String,

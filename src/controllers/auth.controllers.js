@@ -130,7 +130,14 @@ const postLogin = async (req, res, next) => {
 const postRefresh = async (req, res, next) => {
 	try {
 		const accessTokenHeader = req.header('Authorization');
-		const _accessToken = accessTokenHeader.split(' ')[1]; // Access token
+		let _accessToken;
+
+		try {
+			_accessToken = accessTokenHeader.split(' ')[1]; // Access token
+		} catch (error) {
+			return next(createError.BadRequest('Invalid format for the token.'));
+		}
+
 		const _refreshToken = req.header('X-Refresh-Token');
 
 		if (!_refreshToken || !_accessToken) {
@@ -225,7 +232,14 @@ const postRefresh = async (req, res, next) => {
 const postLogout = async (req, res, next) => {
 	try {
 		const accessTokenHeader = req.header('Authorization');
-		const _accessToken = accessTokenHeader.split(' ')[1];
+		let _accessToken;
+
+		try {
+			_accessToken = accessTokenHeader.split(' ')[1]; // Access token
+		} catch (error) {
+			return next(createError.BadRequest('Invalid format for the token.'));
+		}
+
 		const _refreshToken = req.header('X-Refresh-Token');
 
 		if (!_refreshToken) {

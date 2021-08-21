@@ -27,6 +27,9 @@ const {
 	getMeAvatar,
 	putMeAvatar,
 	deleteMeAvatar,
+	getMeInterests,
+	postMeInterests,
+	deleteMeInterests,
 	patchMe,
 	deleteMe,
 	getUserUsername,
@@ -45,6 +48,12 @@ router.get('/me/avatar', auth, getMeAvatar); // Avatar of logged in user
 router.put('/me/avatar', auth, upload.single('avatar'), putMeAvatar); // Upload avatar
 
 router.delete('/me/avatar', auth, deleteMeAvatar);
+
+router.get('/me/interests', auth, getMeInterests);
+
+router.post('/me/interests/:type/:incexc', auth, postMeInterests); // /me/inserests/tv/include or /me/inserests/movie/exclude
+
+router.delete('/me/interests/:type/:incexc', auth, deleteMeInterests); // /me/inserests/tv/include or /me/inserests/movie/exclude
 
 router.patch('/me', auth, patchMe); // Update logged in user's profile
 

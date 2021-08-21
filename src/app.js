@@ -123,6 +123,7 @@ connectMongoose()
 
 		const PORT = process.env.PORT || 4000;
 		app.listen(PORT, (_) => {
+			require('./middlewares/ensure-updates')();
 			console.log('Server is up and running on port', PORT);
 		});
 	})

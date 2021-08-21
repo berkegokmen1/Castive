@@ -30,7 +30,7 @@ const listSchema = new mongoose.Schema(
 		},
 		items: [
 			{
-				type: String,
+				type: [String],
 				default: [],
 				trim: true,
 			},

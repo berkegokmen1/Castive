@@ -6,7 +6,16 @@ const client = require('../db/redis.db');
 
 const auth = async (req, res, next) => {
 	const accessTokenHeader = req.header('Authorization');
-	const accessToken = accessTokenHeader.split(' ')[1]; // Access token
+	if (!accessTokenHeader) {
+		return next(createError.Unauthorized());
+	}
+
+	let accessToken;
+	try {
+		accessToken = accessTokenHeader.split(' ')[1]; // Access token
+	} catch (error) {
+		return next(createError.BadRequest('Invalid format for the token.'));
+	}
 
 	jwt.verify(
 		accessToken,
