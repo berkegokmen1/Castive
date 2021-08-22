@@ -3,25 +3,91 @@ const sharp = require('sharp');
 const createError = require('http-errors');
 
 const checkQuery = require('../util/checkQuery');
+const isNumeric = require('../util/checkIsNumeric');
 const client = require('../db/redis.db');
 const {
 	checkGenreIdsCache,
 	checkGenreIdsFormat,
 } = require('../util/checkGenreIds');
+const {
+	RPP_FOLLOWING_USER,
+	RPP_BLOCKED_USER,
+	RPP_LISTS_USER,
+	RPP_LIBRARY_USER,
+	RPP_FOLLOWERS_USER,
+} = require('../util/resultsPerPage');
 
 const getMe = async (req, res, next) => {
 	try {
 		const user = req.user;
-
 		let result = user;
+
+		const {
+			following_page,
+			followers_page,
+			lists_page,
+			blocked_page,
+			library_page,
+		} = req.query;
+
+		[
+			following_page,
+			followers_page,
+			lists_page,
+			blocked_page,
+			library_page,
+		].forEach((page) => {
+			if (page) {
+				if (!isNumeric(page)) {
+					return next(
+						createError.BadRequest('Page should be an positive integer or 0.')
+					);
+				}
+			}
+		});
 
 		if (checkQuery(req.query.all)) {
 			result = await user
-				.populate('following', 'username -_id')
-				.populate('blocked', 'username -_id')
-				.populate('lists', 'title createdAt')
-				.populate('library', '_id title')
-				.populate('followers', 'username -_id -following')
+				.populate({
+					path: 'following',
+					select: 'username -_id',
+					options: {
+						skip: following_page ? RPP_FOLLOWING_USER * following_page : 0,
+						limit: following_page ? RPP_FOLLOWING_USER : undefined,
+					},
+				})
+				.populate({
+					path: 'blocked',
+					select: 'username -_id',
+					options: {
+						skip: blocked_page ? RPP_BLOCKED_USER * blocked_page : 0,
+						limit: blocked_page ? RPP_BLOCKED_USER : undefined,
+					},
+				})
+				.populate({
+					path: 'lists',
+					select: 'title createdAt',
+					options: {
+						skip: lists_page ? RPP_LISTS_USER * lists_page : 0,
+						limit: lists_page ? RPP_LISTS_USER : undefined,
+					},
+				})
+				.populate({
+					path: 'library',
+					select: '_id title',
+					options: {
+						skip: library_page ? RPP_LIBRARY_USER * library_page : 0,
+						limit: library_page ? RPP_LIBRARY_USER : undefined,
+					},
+				})
+				.populate({
+					path: 'followers',
+					select: 'username -_id -following',
+					options: {
+						skip: followers_page ? RPP_FOLLOWERS_USER * followers_page : 0,
+						limit: followers_page ? RPP_FOLLOWERS_USER : undefined,
+					},
+				})
 				.populate('numFollowers')
 				.execPopulate();
 		} else {
@@ -29,30 +95,67 @@ const getMe = async (req, res, next) => {
 
 			if (checkQuery(req.query.following)) {
 				result = await result
-					.populate('following', 'username -_id')
+					.populate({
+						path: 'following',
+						select: 'username -_id',
+						options: {
+							skip: following_page ? RPP_FOLLOWING_USER * following_page : 0,
+							limit: following_page ? RPP_FOLLOWING_USER : undefined,
+						},
+					})
 					.execPopulate();
 			}
 
 			if (checkQuery(req.query.followers)) {
 				result = await result
-					.populate('followers', 'username -_id -following')
+					.populate({
+						path: 'followers',
+						select: 'username -_id -following',
+						options: {
+							skip: followers_page ? RPP_FOLLOWERS_USER * followers_page : 0,
+							limit: followers_page ? RPP_FOLLOWERS_USER : undefined,
+						},
+					})
 					.execPopulate();
 			}
 
 			if (checkQuery(req.query.lists)) {
 				result = await result
-					.populate('lists', 'title createdAt')
+					.populate({
+						path: 'lists',
+						select: 'title createdAt',
+						options: {
+							skip: lists_page ? RPP_LISTS_USER * lists_page : 0,
+							limit: lists_page ? RPP_LISTS_USER : undefined,
+						},
+					})
 					.execPopulate();
 			}
 
 			if (checkQuery(req.query.blocked)) {
 				result = await result
-					.populate('blocked', 'username -_id')
+					.populate({
+						path: 'blocked',
+						select: 'username -_id',
+						options: {
+							skip: blocked_page ? RPP_BLOCKED_USER * blocked_page : 0,
+							limit: blocked_page ? RPP_BLOCKED_USER : undefined,
+						},
+					})
 					.execPopulate();
 			}
 
 			if (checkQuery(req.query.library)) {
-				result = await result.populate('library', '_id title').execPopulate();
+				result = await result
+					.populate({
+						path: 'library',
+						select: '_id title',
+						options: {
+							skip: library_page ? RPP_LIBRARY_USER * library_page : 0,
+							limit: library_page ? RPP_LIBRARY_USER : undefined,
+						},
+					})
+					.execPopulate();
 			}
 		}
 
@@ -278,6 +381,30 @@ const getUserUsername = async (req, res, next) => {
 	try {
 		const username = req.params.username;
 
+		const {
+			following_page,
+			followers_page,
+			lists_page,
+			blocked_page,
+			library_page,
+		} = req.query;
+
+		[
+			following_page,
+			followers_page,
+			lists_page,
+			blocked_page,
+			library_page,
+		].forEach((page) => {
+			if (page) {
+				if (!isNumeric(page)) {
+					return next(
+						createError.BadRequest('Page should be an positive integer or 0.')
+					);
+				}
+			}
+		});
+
 		let user;
 
 		user = await User.findOne({ username })
@@ -295,20 +422,64 @@ const getUserUsername = async (req, res, next) => {
 
 		if (checkQuery(req.query.all)) {
 			user = await user
-				.populate('following', 'username -_id')
-				.populate('lists', 'title createdAt')
-				.populate('followers', 'username -_id')
+				.populate({
+					path: 'following',
+					select: 'username -_id',
+					options: {
+						skip: following_page ? RPP_FOLLOWING_USER * following_page : 0,
+						limit: following_page ? RPP_FOLLOWING_USER : undefined,
+					},
+				})
+				.populate({
+					path: 'lists',
+					select: 'title createdAt',
+					options: {
+						skip: lists_page ? RPP_LISTS_USER * lists_page : 0,
+						limit: lists_page ? RPP_LISTS_USER : undefined,
+					},
+				})
+				.populate({
+					path: 'followers',
+					select: 'username -_id',
+					options: {
+						skip: followers_page ? RPP_FOLLOWERS_USER * followers_page : 0,
+						limit: followers_page ? RPP_FOLLOWERS_USER : undefined,
+					},
+				})
+				.populate({
+					path: 'library',
+					select: '_id title',
+					options: {
+						skip: library_page ? RPP_LIBRARY_USER * library_page : 0,
+						limit: library_page ? RPP_LIBRARY_USER : undefined,
+					},
+				})
 				.populate('numFollowers')
-				.populate('library', '_id title')
 				.execPopulate();
 		} else {
 			if (checkQuery(req.query.following)) {
-				user = await user.populate('following', 'username -_id').execPopulate();
+				user = await user
+					.populate({
+						path: 'following',
+						select: 'username -_id',
+						options: {
+							skip: following_page ? RPP_FOLLOWING_USER * following_page : 0,
+							limit: following_page ? RPP_FOLLOWING_USER : undefined,
+						},
+					})
+					.execPopulate();
 			}
 
 			if (checkQuery(req.query.followers)) {
 				user = await user
-					.populate('followers', 'username -_id -following')
+					.populate({
+						path: 'followers',
+						select: 'username -_id',
+						options: {
+							skip: followers_page ? RPP_FOLLOWERS_USER * followers_page : 0,
+							limit: followers_page ? RPP_FOLLOWERS_USER : undefined,
+						},
+					})
 					.execPopulate();
 			}
 
@@ -316,8 +487,12 @@ const getUserUsername = async (req, res, next) => {
 				user = await user
 					.populate({
 						path: 'lists',
-						match: { private: false },
 						select: 'title createdAt',
+						match: { private: false },
+						options: {
+							skip: lists_page ? RPP_LISTS_USER * lists_page : 0,
+							limit: lists_page ? RPP_LISTS_USER : undefined,
+						},
 					})
 					.execPopulate();
 			}

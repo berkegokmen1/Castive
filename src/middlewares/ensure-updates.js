@@ -3,19 +3,10 @@ const User = require('../models/user.model');
 const ensure = async () => {
 	// console.log('sa');
 	// await User.updateMany(
-	// 	{ interests: { $exists: false } },
+	// 	{ birthdate: { $exists: false } },
 	// 	{
 	// 		$set: {
-	// 			interests: {
-	// 				tv: {
-	// 					include: [],
-	// 					exclude: [],
-	// 				},
-	// 				movie: {
-	// 					include: [],
-	// 					exclude: [],
-	// 				},
-	// 			},
+	// 			birthdate: new Date('1980-03-22'),
 	// 		},
 	// 	}
 	// );

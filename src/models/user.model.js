@@ -127,9 +127,11 @@ const userSchema = new mongoose.Schema(
  ******************************/
 
 userSchema.virtual('age').get(function () {
-	return Math.floor(
-		(Date.now() - this.birthdate.getTime()) / (1000 * 3600 * 24 * 365)
-	);
+	if (this.birthdate) {
+		return Math.floor(
+			(Date.now() - this.birthdate.getTime()) / (1000 * 3600 * 24 * 365)
+		);
+	}
 });
 
 /******************************

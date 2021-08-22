@@ -5,13 +5,37 @@ const mongoose = require('mongoose');
 const { listValidation } = require('../util/formValidation');
 const List = require('../models/list.model');
 const checkQuery = require('../util/checkQuery');
+const isNumeric = require('../util/checkIsNumeric');
+
+const {
+	RPP_LISTS_USER,
+	RPP_LIBRARY_USER,
+	RPP_FOLLOWERS_LIST,
+} = require('../util/resultsPerPage');
 
 const getMe = async (req, res, next) => {
 	try {
+		const { page } = req.query;
+
+		if (page) {
+			if (!isNumeric(page)) {
+				return next(
+					createError.BadRequest('Page should be an positive integer or 0.')
+				);
+			}
+		}
+
 		const user = req.user;
 
 		const result = await user
-			.populate('lists', '_id title createdAt private') /* description */
+			.populate({
+				path: 'lists',
+				select: '_id title createdAt private',
+				options: {
+					skip: page ? RPP_LISTS_USER * page : 0,
+					limit: page ? RPP_LISTS_USER : undefined,
+				},
+			})
 			.execPopulate();
 
 		return res.json({
@@ -60,10 +84,27 @@ const postMe = async (req, res, next) => {
 
 const getLibrary = async (req, res, next) => {
 	try {
+		const { page } = req.query;
+
+		if (page) {
+			if (!isNumeric(page)) {
+				return next(
+					createError.BadRequest('Page should be an positive integer or 0.')
+				);
+			}
+		}
+
 		const user = req.user;
 
 		const result = await user
-			.populate('library', '_id title') /* description */
+			.populate({
+				path: 'library',
+				select: '_id title',
+				options: {
+					skip: page ? RPP_LIBRARY_USER * page : 0,
+					limit: page ? RPP_LIBRARY_USER : undefined,
+				},
+			})
 			.execPopulate();
 
 		return res.json({
@@ -101,6 +142,14 @@ const postLibrary = async (req, res, next) => {
 			if (list.owner.toString() !== req.user._id.toString()) {
 				return next(createError.NotFound());
 			}
+		}
+
+		if (req.user.library.includes(list._id)) {
+			return next(
+				createError.BadRequest(
+					`${list.title} has previously been added to the library.`
+				)
+			);
 		}
 
 		req.user.library.push(list._id);
@@ -160,6 +209,16 @@ const getList = async (req, res, next) => {
 			return next(createError.BadRequest('No id provided.'));
 		}
 
+		const { page } = req.query;
+
+		if (page) {
+			if (!isNumeric(page)) {
+				return next(
+					createError.BadRequest('Page should be an positive integer or 0.')
+				);
+			}
+		}
+
 		let id;
 
 		try {
@@ -186,7 +245,14 @@ const getList = async (req, res, next) => {
 
 		if (checkQuery(req.query.followers)) {
 			list = await list
-				.populate('followers', '_id username -library')
+				.populate({
+					path: 'followers',
+					select: '_id username -library',
+					options: {
+						skip: page ? RPP_FOLLOWERS_LIST * page : 0,
+						limit: page ? RPP_FOLLOWERS_LIST : undefined,
+					},
+				})
 				.execPopulate();
 		}
 
