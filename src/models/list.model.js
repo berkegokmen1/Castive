@@ -28,13 +28,11 @@ const listSchema = new mongoose.Schema(
 			type: Boolean,
 			default: false,
 		},
-		items: [
-			{
-				type: [String],
-				default: [],
-				trim: true,
-			},
-		],
+		items: {
+			type: [String],
+			default: [],
+			trim: true,
+		},
 	},
 	{
 		timestamps: {

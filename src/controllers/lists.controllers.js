@@ -68,6 +68,7 @@ const postMe = async (req, res, next) => {
 			});
 		}
 
+		// Check items first
 		const list = await user.addList(title, description, private, items);
 
 		return res.status(201).json({
@@ -407,6 +408,12 @@ const postListItems = async (req, res, next) => {
 
 		if (list.owner.toString() !== req.user._id.toString()) {
 			return next(createError.Forbidden());
+		}
+
+		if (list.items.includes(idToAdd)) {
+			return next(
+				createError.BadRequest('Id has previously been added to the list.')
+			);
 		}
 
 		list.items.push(idToAdd);
