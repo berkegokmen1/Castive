@@ -4,7 +4,10 @@ const createError = require('http-errors');
 
 const checkQuery = require('../util/checkQuery');
 const client = require('../db/redis.db');
-const checkGenreIds = require('../util/checkGenreIds');
+const {
+	checkGenreIdsCache,
+	checkGenreIdsFormat,
+} = require('../util/checkGenreIds');
 
 const getMe = async (req, res, next) => {
 	try {
@@ -156,9 +159,15 @@ const postMeInterests = async (req, res, next) => {
 			return next(createError.BadRequest('Please provide ids.'));
 		}
 
-		if (!checkGenreIds(ids)) {
+		if (!checkGenreIdsFormat(ids)) {
 			return next(
 				createError.BadRequest('ids should be an array of integers.')
+			);
+		}
+
+		if (!(await checkGenreIdsCache(ids, type))) {
+			return next(
+				createError.BadRequest('ids should be valid according to tmdb.')
 			);
 		}
 
@@ -213,12 +222,6 @@ const deleteMeInterests = async (req, res, next) => {
 
 		if (!ids) {
 			return next(createError.BadRequest('Please provide ids.'));
-		}
-
-		if (!checkGenreIds(ids)) {
-			return next(
-				createError.BadRequest('ids should be an array of integers.')
-			);
 		}
 
 		const temp = req.user.interests[type][incexc];
