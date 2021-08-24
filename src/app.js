@@ -16,6 +16,7 @@ const createError = require('http-errors');
 const authRoutes = require('./routes/auth.routes');
 const usersRoutes = require('./routes/users.routes');
 const listsRoutes = require('./routes/lists.routes');
+const searchRoutes = require('./routes/search.routes');
 
 const connectMongoose = require('./db/mongoose.db');
 
@@ -86,6 +87,7 @@ app.use(
 app.use('/auth', authRoutes);
 app.use('/users', usersRoutes);
 app.use('/lists', listsRoutes);
+app.use('/search', searchRoutes);
 
 // Temp route
 const tempRoutes = require('./temp/temp.routes');
