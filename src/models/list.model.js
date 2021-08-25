@@ -80,6 +80,7 @@ listSchema.static('search', async function (q, id) {
         select: 'blocked -_id',
       })
       .limit(25)
+      .lean()
       .select('_id title owner')
       .exec();
   };
@@ -102,6 +103,7 @@ listSchema.static('search', async function (q, id) {
         select: 'blocked -_id',
       })
       .limit(25)
+      .lean()
       .select('_id title owner')
       .sort({ score: { $meta: 'textScore' } })
       .exec();
@@ -121,7 +123,7 @@ listSchema.static('search', async function (q, id) {
     // Filter out the results in which user is blocked by the list owner
     data = data.filter((d) => d.owner.blocked.indexOf(id) === -1);
     data = data.map((d) => {
-      const { owner, ...rest } = d.toJSON();
+      const { owner, ...rest } = d;
       return rest;
     });
 

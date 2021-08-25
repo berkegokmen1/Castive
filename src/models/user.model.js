@@ -252,10 +252,12 @@ userSchema.static('search', async function (q, id) {
   const searchPartial = async (q) => {
     return await u
       .find({
+        _id: { $ne: id },
         username: new RegExp(q, 'gi'),
         blocked: { $nin: [id] },
       })
       .limit(25)
+      .lean()
       .select('-_id username')
       .exec();
   };
@@ -269,11 +271,13 @@ userSchema.static('search', async function (q, id) {
             $caseSensitive: false,
             $diacriticSensitive: false,
           },
+          _id: { $ne: id },
           blocked: { $nin: [id] },
         },
         { score: { $meta: 'textScore' } }
       )
       .limit(25)
+      .lean()
       .select('-_id username')
       .sort({ score: { $meta: 'textScore' } })
       .exec();
