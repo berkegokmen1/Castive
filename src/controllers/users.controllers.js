@@ -2,6 +2,7 @@ const User = require('../models/user.model');
 const sharp = require('sharp');
 const createError = require('http-errors');
 
+const { updateProfileValidation } = require('../util/formValidation');
 const checkQuery = require('../util/checkQuery');
 const isNumeric = require('../util/checkIsNumeric');
 const client = require('../db/redis.db');
@@ -16,6 +17,7 @@ const {
   RPP_LIBRARY_USER,
   RPP_FOLLOWERS_USER,
 } = require('../util/resultsPerPage');
+const { sendVerificationMail } = require('../util/mailer');
 
 const getMe = async (req, res, next) => {
   try {
@@ -353,7 +355,76 @@ const deleteMeInterests = async (req, res, next) => {
 };
 
 // Has some work to do
-const patchMe = async (req, res, next) => {};
+const patchMe = async (req, res, next) => {
+  try {
+    const user = req.user;
+
+    const { email, birthdate } = req.body;
+
+    if (!email && !birthdate) {
+      return next(
+        createError.BadRequest(
+          'At least one field (email or birthdate) must be provided.'
+        )
+      );
+    }
+
+    const validationErrors = updateProfileValidation(email, birthdate);
+
+    if (validationErrors.length > 0) {
+      return res.status(400).json({
+        success: false,
+        Data: {
+          error: 'Validation Errors',
+          validationErrors,
+        },
+      });
+    }
+
+    if (email) {
+      if (email !== user.email.value) {
+        // Check email uniqueness
+        const emailCheck = await User.findOne({ 'email.value': email })
+          .lean()
+          .exec();
+        if (emailCheck) {
+          return next(createError.Conflict('Email already exists.'));
+        }
+
+        user.email.value = email;
+        user.email.verified = false;
+
+        sendVerificationMail(email);
+      }
+    }
+
+    if (birthdate) {
+      if (birthdate !== user.birthdate) {
+        const oldDate = user.birthdate;
+
+        user.birthdate = birthdate;
+
+        if (user.age < 13) {
+          user.birthdate = oldDate;
+          return next(
+            createError.Forbidden('Users under the age of 13 are not allowed.')
+          );
+        }
+      }
+    }
+
+    await user.save();
+
+    return res.json({
+      success: true,
+      Data: {
+        message: 'Profile updated.',
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
 const deleteMe = async (req, res, next) => {
   try {

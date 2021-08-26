@@ -1,5 +1,5 @@
 if (process.env.NODE_ENV !== 'production') {
-	require('dotenv').config();
+  require('dotenv').config();
 }
 
 const express = require('express');
@@ -29,16 +29,16 @@ app.set('trust proxy', 1);
 
 // Https redirection
 if (process.env.NODE_ENV === 'production') {
-	app.use((req, res, next) => {
-		if (req.header('x-forwarded-proto') !== 'https') {
-			res.redirect('https://' + req.header('host') + req.url);
-		} else {
-			next();
-		}
-	});
+  app.use((req, res, next) => {
+    if (req.header('x-forwarded-proto') !== 'https') {
+      res.redirect('https://' + req.header('host') + req.url);
+    } else {
+      next();
+    }
+  });
 } else {
-	// Logger
-	app.use(morgan('dev'));
+  // Logger
+  app.use(morgan('dev'));
 }
 
 // Parse body
@@ -51,21 +51,21 @@ app.use(helmet());
 // Cors
 app.options('*', cors()); // ???
 app.use(
-	cors({
-		origin: [
-			process.env.BASE_URL /* backend */,
-			'http://localhost:3000' /* frontend */,
-		],
-	})
+  cors({
+    origin: [
+      process.env.BASE_URL /* backend */,
+      'http://localhost:3000' /* frontend */,
+    ],
+  })
 );
 
 // Prevent against nosql query injection attacks
 app.use(
-	mongoSanitize({
-		onSanitize: (_) => {
-			throw createError.Forbidden();
-		},
-	})
+  mongoSanitize({
+    onSanitize: (_) => {
+      throw createError.Forbidden();
+    },
+  })
 );
 
 // Prevent against xss attacks
@@ -75,12 +75,12 @@ app.use(xss());
 app.use(hpp());
 
 app.use(
-	compression({
-		filter: (req, res) => {
-			if (req.headers['x-no-compression']) return false;
-			return compression.filter(req, res);
-		},
-	})
+  compression({
+    filter: (req, res) => {
+      if (req.headers['x-no-compression']) return false;
+      return compression.filter(req, res);
+    },
+  })
 );
 
 // Route registers
@@ -95,41 +95,43 @@ app.use('/', tempRoutes);
 
 // 404 Route
 app.use('*', (req, res, next) => {
-	return res.status(404).json({
-		success: false,
-		Data: {
-			error: 'Endpoint not found.',
-		},
-	});
+  return res.status(404).json({
+    success: false,
+    Data: {
+      error: 'Endpoint not found.',
+    },
+  });
 });
 
 // Error handlers
 app.use((error, req, res, next) => {
-	if (process.env.NODE_ENV !== 'production') {
-		console.log(error);
-	}
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(error);
+  }
 
-	return res.status(error.statusCode || 500).json({
-		success: false,
-		Data: {
-			error: error.message,
-		},
-	});
+  const errorsBlacklist = ['CastError'];
+
+  return res.status(error.statusCode || 500).json({
+    success: false,
+    Data: {
+      error: !errorsBlacklist.includes(error.name) ? error.message : 'error',
+    },
+  });
 });
 
 // DB Connections and server initializing
 connectMongoose()
-	.then((_) => {
-		// Initialize redis
-		require('./db/redis.db');
+  .then((_) => {
+    // Initialize redis
+    require('./db/redis.db');
 
-		const PORT = process.env.PORT || 4000;
-		app.listen(PORT, (_) => {
-			require('./middlewares/ensure-updates')();
-			console.log('Server is up and running on port', PORT);
-		});
-	})
-	.catch((err) => {
-		console.log(err);
-		process.exit();
-	});
+    const PORT = process.env.PORT || 4000;
+    app.listen(PORT, (_) => {
+      require('./middlewares/ensure-updates')();
+      console.log('Server is up and running on port', PORT);
+    });
+  })
+  .catch((err) => {
+    console.log(err);
+    process.exit();
+  });
