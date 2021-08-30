@@ -1,23 +1,23 @@
-const User = require('../models/user.model');
 const sharp = require('sharp');
 const createError = require('http-errors');
 
-const { updateProfileValidation } = require('../util/formValidation');
-const checkQuery = require('../util/checkQuery');
-const isNumeric = require('../util/checkIsNumeric');
-const client = require('../db/redis.db');
+const User = require('../../models/user.model');
+const { updateProfileValidation } = require('../../util/formValidation');
+const checkQuery = require('../../util/checkQuery');
+const isNumeric = require('../../util/checkIsNumeric');
+const client = require('../../db/redis.db');
 const {
   checkGenreIdsCache,
   checkGenreIdsFormat,
-} = require('../util/checkGenreIds');
+} = require('../../util/checkGenreIds');
 const {
   RPP_FOLLOWING_USER,
   RPP_BLOCKED_USER,
   RPP_LISTS_USER,
   RPP_LIBRARY_USER,
   RPP_FOLLOWERS_USER,
-} = require('../util/resultsPerPage');
-const { sendVerificationMail } = require('../util/mailer');
+} = require('../../util/resultsPerPage');
+const { sendVerificationMail } = require('../../util/mailer');
 
 const getMe = async (req, res, next) => {
   try {

@@ -2,43 +2,43 @@ const express = require('express');
 const multer = require('multer');
 const createError = require('http-errors');
 
-const auth = require('../middlewares/check-auth');
+const auth = require('../../middlewares/check-auth');
 
 const router = express.Router();
 
 // Multer upload
 const upload = multer({
-	limits: {
-		fileSize: 1000000,
-	},
-	fileFilter(req, file, cb) {
-		if (!file.originalname.match(/\.(jpg|jpeg|png)$/)) {
-			return cb(
-				createError.BadRequest('Please upload a supported image format.')
-			);
-		}
+  limits: {
+    fileSize: 1000000,
+  },
+  fileFilter(req, file, cb) {
+    if (!file.originalname.match(/\.(jpg|jpeg|png)$/)) {
+      return cb(
+        createError.BadRequest('Please upload a supported image format.')
+      );
+    }
 
-		cb(undefined, true);
-	},
+    cb(undefined, true);
+  },
 });
 
 const {
-	getMe,
-	getMeAvatar,
-	putMeAvatar,
-	deleteMeAvatar,
-	getMeInterests,
-	postMeInterests,
-	deleteMeInterests,
-	patchMe,
-	deleteMe,
-	getUserUsername,
-	getUserUsernameAvatar,
-	postFollow,
-	postUnfollow,
-	postBlock,
-	postUnblock,
-} = require('../controllers/users.controllers');
+  getMe,
+  getMeAvatar,
+  putMeAvatar,
+  deleteMeAvatar,
+  getMeInterests,
+  postMeInterests,
+  deleteMeInterests,
+  patchMe,
+  deleteMe,
+  getUserUsername,
+  getUserUsernameAvatar,
+  postFollow,
+  postUnfollow,
+  postBlock,
+  postUnblock,
+} = require('../../controllers/v1/users.controllers');
 
 // Routes => /users
 router.get('/me', auth, getMe); // /users/me?all=1 or /users/me?following=1&followers=0&lists=true&blocked=false&library=1

@@ -1,7 +1,7 @@
 const createError = require('http-errors');
 
-const User = require('../models/user.model');
-const List = require('../models/list.model');
+const User = require('../../models/user.model');
+const List = require('../../models/list.model');
 
 const getUsers = async (req, res, next) => {
   try {

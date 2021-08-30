@@ -2,21 +2,21 @@ const express = require('express');
 
 const router = express.Router();
 
-const auth = require('../middlewares/check-auth');
+const auth = require('../../middlewares/check-auth');
 
 const {
-	putRegister,
-	postLogin,
-	postRefresh,
-	postLogout,
-	postLogoutAll,
-	patchVerifyEmail,
-	postRequestVerificationMail,
-	patchReset,
-	postRequestResetMail,
-} = require('../controllers/auth.controllers');
+  putRegister,
+  postLogin,
+  postRefresh,
+  postLogout,
+  postLogoutAll,
+  patchVerifyEmail,
+  postRequestVerificationMail,
+  patchReset,
+  postRequestResetMail,
+} = require('../../controllers/v1/auth.controllers');
 
-const { authLimiter, requestMailLimiter } = require('../util/limiter');
+const { authLimiter, requestMailLimiter } = require('../../util/limiter');
 
 // Routes => /auth
 router.put('/register', authLimiter, putRegister);
@@ -32,9 +32,9 @@ router.post('/logoutall', auth, postLogoutAll);
 router.patch('/verify', patchVerifyEmail);
 
 router.post(
-	'/request/verification',
-	requestMailLimiter,
-	postRequestVerificationMail
+  '/request/verification',
+  requestMailLimiter,
+  postRequestVerificationMail
 );
 
 router.patch('/reset', patchReset);

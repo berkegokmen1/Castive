@@ -2,8 +2,11 @@ const express = require('express');
 
 const router = express.Router();
 
-const auth = require('../middlewares/check-auth');
-const { getUsers, getLists } = require('../controllers/search.controllers');
+const auth = require('../../middlewares/check-auth');
+const {
+  getUsers,
+  getLists,
+} = require('../../controllers/v1/search.controllers');
 
 router.get('/users', auth, getUsers);
 

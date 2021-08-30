@@ -2,40 +2,40 @@ const express = require('express');
 const multer = require('multer');
 const createError = require('http-errors');
 
-const auth = require('../middlewares/check-auth');
+const auth = require('../../middlewares/check-auth');
 
 const {
-	getMe,
-	postMe,
-	getLibrary,
-	postLibrary,
-	deleteLibrary,
-	getList,
-	patchList,
-	deleteList,
-	postListItems,
-	deleteListItems,
-	getListCover,
-	putListCover,
-	deleteListCover,
-} = require('../controllers/lists.controllers');
+  getMe,
+  postMe,
+  getLibrary,
+  postLibrary,
+  deleteLibrary,
+  getList,
+  patchList,
+  deleteList,
+  postListItems,
+  deleteListItems,
+  getListCover,
+  putListCover,
+  deleteListCover,
+} = require('../../controllers/v1/lists.controllers');
 
 const router = express.Router();
 
 // Multer upload
 const upload = multer({
-	limits: {
-		fileSize: 1000000,
-	},
-	fileFilter(req, file, cb) {
-		if (!file.originalname.match(/\.(jpg|jpeg|png)$/)) {
-			return cb(
-				createError.BadRequest('Please upload a supported image format.')
-			);
-		}
+  limits: {
+    fileSize: 1000000,
+  },
+  fileFilter(req, file, cb) {
+    if (!file.originalname.match(/\.(jpg|jpeg|png)$/)) {
+      return cb(
+        createError.BadRequest('Please upload a supported image format.')
+      );
+    }
 
-		cb(undefined, true);
-	},
+    cb(undefined, true);
+  },
 });
 
 // Routes => /lists
