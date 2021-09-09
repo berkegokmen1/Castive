@@ -103,7 +103,7 @@ app.use((error, req, res, next) => {
     console.log(error);
   }
 
-  const errorsBlacklist = ['CastError'];
+  const errorsBlacklist = ['CastError', 'TypeError'];
 
   return res.status(error.statusCode || 500).json({
     success: false,

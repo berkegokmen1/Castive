@@ -12,6 +12,7 @@ const {
   RPP_LIBRARY_USER,
   RPP_FOLLOWERS_LIST,
 } = require('../../util/resultsPerPage');
+const Image = require('../../models/image.model');
 
 const getMe = async (req, res, next) => {
   try {
@@ -506,12 +507,59 @@ const getListCover = async (req, res, next) => {
       }
     }
 
+    let resolution = req.query.resolution;
+
+    if (!resolution) {
+      resolution = 'original';
+    } else {
+      if (
+        resolution != 'original' &&
+        resolution != 'small' &&
+        resolution != 'medium'
+      ) {
+        return next(createError.BadRequest('Resolution not found.'));
+      }
+    }
+
     if (!list.cover) {
       return next(createError.NotFound('Cover not found.'));
     }
 
-    res.set('Content-Type', 'image/png');
-    return res.send(list.cover);
+    let response;
+
+    await list
+      .populate({
+        path: 'cover',
+        select: `${resolution} original _id`,
+      })
+      .execPopulate();
+
+    response = list.cover[resolution] || undefined;
+
+    if (!response) {
+      let buffer;
+
+      if (resolution === 'medium') {
+        buffer = await sharp(list.cover.original)
+          .resize({ width: 800, height: 800 })
+          .jpeg({ quality: 75 })
+          .toBuffer();
+      } else if (resolution === 'small') {
+        buffer = await sharp(list.cover.original)
+          .resize({ width: 600, height: 600 })
+          .jpeg({ quality: 60 })
+          .toBuffer();
+      }
+
+      const cover = await Image.findById(list.cover._id);
+      cover[resolution] = buffer;
+      await cover.save();
+
+      response = buffer;
+    }
+
+    res.set('Content-Type', 'image/jpeg');
+    return res.send(response);
   } catch (error) {
     return next(error);
   }
@@ -545,13 +593,22 @@ const putListCover = async (req, res, next) => {
       return next(createError.Forbidden());
     }
 
+    if (list.cover) {
+      console.log(list.cover);
+      await Image.findByIdAndRemove(list.cover);
+    }
+
     const buffer = await sharp(req.file.buffer)
-      .resize({ width: 500, height: 500 })
-      .png()
+      .resize({ width: 1200, height: 1200 })
+      .jpeg({ quality: 100 })
       .toBuffer();
 
-    list.cover = buffer;
-    await list.save();
+    const cover = new Image({
+      original: buffer,
+    });
+    list.cover = cover._id;
+
+    await Promise.all([list.save(), cover.save()]);
 
     return res.status(201).json({
       success: true,
@@ -588,8 +645,11 @@ const deleteListCover = async (req, res, next) => {
       return next(createError.Forbidden());
     }
 
+    const imageId = list.cover;
+
     list.cover = undefined;
-    await list.save();
+
+    await Promise.all([Image.findByIdAndRemove(imageId), list.save()]);
 
     return res.json({
       success: true,

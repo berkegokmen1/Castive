@@ -10,7 +10,8 @@ const listSchema = new mongoose.Schema(
       maxlength: 25,
     },
     cover: {
-      type: Buffer,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Image',
       default: undefined,
     },
     owner: {

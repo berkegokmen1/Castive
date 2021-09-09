@@ -39,7 +39,8 @@ const userSchema = new mongoose.Schema(
       required: true,
     },
     avatar: {
-      type: Buffer,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Image',
       default: undefined,
     },
     following: [

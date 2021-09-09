@@ -3,45 +3,45 @@ const nodemailer = require('nodemailer');
 const { signEmailToken, signResetToken } = require('./jwt');
 
 const transporter = nodemailer.createTransport({
-	service: process.env.MAIL_SERVICE,
-	auth: {
-		user: process.env.MAILER_USER,
-		pass: process.env.MAILER_PASS,
-	},
-	logger: false,
+  service: process.env.MAIL_SERVICE,
+  auth: {
+    user: process.env.MAILER_USER,
+    pass: process.env.MAILER_PASS,
+  },
+  logger: false,
 });
 
 const sendVerificationMail = async (email) => {
-	// Generate confirmation token
-	const emailToken = await signEmailToken(email);
+  // Generate confirmation token
+  const emailToken = await signEmailToken(email);
 
-	// Generate link from current url
-	const link = process.env.BASE_URL + '/auth/verify/' + emailToken;
+  // Generate link from current url
+  const link = process.env.BASE_URL + '/v1/auth/verify/' + emailToken;
 
-	transporter.sendMail({
-		from: 'no-reply@castive.me',
-		to: email,
-		subject: 'Please confirm your email adress',
-		html: `
+  transporter.sendMail({
+    from: 'no-reply@castive.me',
+    to: email,
+    subject: 'Please confirm your email adress',
+    html: `
 			<h1>Click the link below</h1>
 			<a href="${link}">${link}</a>
 			<p>After 24 hours, the link will be expired.</p>
 			`,
-		text: '',
-	});
+    text: '',
+  });
 };
 
 const sendResetMail = async (email) => {
-	const forgotPasswordToken = await signResetToken(email);
+  const forgotPasswordToken = await signResetToken(email);
 
-	// Generate link from current url
-	const link = process.env.BASE_URL + '/auth/reset/' + forgotPasswordToken;
+  // Generate link from current url
+  const link = process.env.BASE_URL + '/v1/auth/reset/' + forgotPasswordToken;
 
-	transporter.sendMail({
-		from: 'no-reply@castive.me',
-		to: email,
-		subject: 'Password reset request',
-		html: `
+  transporter.sendMail({
+    from: 'no-reply@castive.me',
+    to: email,
+    subject: 'Password reset request',
+    html: `
 		
 			<h1>Click the link below</h1>
 			<a href="${link}">${link}</a>
@@ -49,21 +49,21 @@ const sendResetMail = async (email) => {
 
 			<p>Simply ignore this email if you did not request it.</p>
 			`,
-		text: '',
-	});
+    text: '',
+  });
 };
 
 const sendWelcomeMail = (email, username) => {
-	transporter.sendMail({
-		from: 'no-reply@castive.me',
-		to: email,
-		subject: `Welcome to Castive ${username}!`,
-		html: `
+  transporter.sendMail({
+    from: 'no-reply@castive.me',
+    to: email,
+    subject: `Welcome to Castive ${username}!`,
+    html: `
 			<h1>Welcome to Castive ${username}!</h1>
 			<p>Start building your playlists and sharing!</p>
 			`,
-		text: '',
-	});
+    text: '',
+  });
 };
 
 module.exports = { sendVerificationMail, sendResetMail, sendWelcomeMail };

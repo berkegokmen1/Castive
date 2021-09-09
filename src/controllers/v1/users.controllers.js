@@ -2,6 +2,7 @@ const sharp = require('sharp');
 const createError = require('http-errors');
 
 const User = require('../../models/user.model');
+const Image = require('../../models/image.model');
 const { updateProfileValidation } = require('../../util/formValidation');
 const checkQuery = require('../../util/checkQuery');
 const isNumeric = require('../../util/checkIsNumeric');
@@ -42,7 +43,7 @@ const getMe = async (req, res, next) => {
       if (page) {
         if (!isNumeric(page)) {
           return next(
-            createError.BadRequest('Page should be an positive integer or 0.')
+            createError.BadRequest('Page should be a positive integer or 0.')
           );
         }
       }
@@ -178,14 +179,61 @@ const getMe = async (req, res, next) => {
   }
 };
 
-const getMeAvatar = (req, res, next) => {
+const getMeAvatar = async (req, res, next) => {
   try {
+    let resolution = req.query.resolution;
+
+    if (!resolution) {
+      resolution = 'original';
+    } else {
+      if (
+        resolution != 'original' &&
+        resolution != 'small' &&
+        resolution != 'medium'
+      ) {
+        return next(createError.BadRequest('Resolution not found.'));
+      }
+    }
+
     if (!req.user.avatar) {
       return next(createError.NotFound('No avatar found.'));
     }
 
-    res.set('Content-Type', 'image/png');
-    return res.send(req.user.avatar);
+    let response;
+
+    await req.user
+      .populate({
+        path: 'avatar',
+        select: `${resolution} original _id`,
+      })
+      .execPopulate();
+
+    response = req.user.avatar[resolution] || undefined;
+
+    if (!response) {
+      let buffer;
+
+      if (resolution === 'medium') {
+        buffer = await sharp(req.user.avatar.original)
+          .resize({ width: 800, height: 800 })
+          .jpeg({ quality: 75 })
+          .toBuffer();
+      } else if (resolution === 'small') {
+        buffer = await sharp(req.user.avatar.original)
+          .resize({ width: 600, height: 600 })
+          .jpeg({ quality: 60 })
+          .toBuffer();
+      }
+
+      const avatar = await Image.findById(req.user.avatar._id);
+      avatar[resolution] = buffer;
+      await avatar.save();
+
+      response = buffer;
+    }
+
+    res.set('Content-Type', 'image/jpeg');
+    return res.send(response);
   } catch (error) {
     return next(error);
   }
@@ -197,13 +245,21 @@ const putMeAvatar = async (req, res, next) => {
       return next(createError.BadRequest('No file provided.'));
     }
 
+    if (req.user.avatar) {
+      await Image.findByIdAndRemove(req.user.avatar);
+    }
+
     const buffer = await sharp(req.file.buffer)
-      .resize({ width: 500, height: 500 })
-      .png()
+      .resize({ width: 1200, height: 1200 })
+      .jpeg({ quality: 100 })
       .toBuffer();
 
-    req.user.avatar = buffer;
-    await req.user.save();
+    const avatar = new Image({
+      original: buffer,
+    });
+    req.user.avatar = avatar._id;
+
+    await Promise.all([req.user.save(), avatar.save()]);
 
     return res.status(201).json({
       success: true,
@@ -218,8 +274,11 @@ const putMeAvatar = async (req, res, next) => {
 
 const deleteMeAvatar = async (req, res, next) => {
   try {
+    const imageId = req.user.avatar;
+
     req.user.avatar = undefined;
-    await req.user.save();
+
+    await Promise.all([Image.findByIdAndRemove(imageId), req.user.save()]);
 
     return res.json({
       success: true,
@@ -599,6 +658,20 @@ const getUserUsernameAvatar = async (req, res, next) => {
   }
 
   try {
+    let resolution = req.query.resolution;
+
+    if (!resolution) {
+      resolution = 'original';
+    } else {
+      if (
+        resolution != 'original' &&
+        resolution != 'small' &&
+        resolution != 'medium'
+      ) {
+        return next(createError.BadRequest('Resolution not found.'));
+      }
+    }
+
     const username = req.params.username;
     const user = await User.findOne({ username })
       .select('avatar blocked')
@@ -616,8 +689,41 @@ const getUserUsernameAvatar = async (req, res, next) => {
       return next(createError.NotFound('No avatar found.'));
     }
 
+    let response;
+
+    await user
+      .populate({
+        path: 'avatar',
+        select: `${resolution} original _id`,
+      })
+      .execPopulate();
+
+    response = user.avatar[resolution] || undefined;
+
+    if (!response) {
+      let buffer;
+
+      if (resolution === 'medium') {
+        buffer = await sharp(user.avatar.original)
+          .resize({ width: 800, height: 800 })
+          .jpeg({ quality: 75 })
+          .toBuffer();
+      } else if (resolution === 'small') {
+        buffer = await sharp(user.avatar.original)
+          .resize({ width: 600, height: 600 })
+          .jpeg({ quality: 60 })
+          .toBuffer();
+      }
+
+      const avatar = await Image.findById(user.avatar._id);
+      avatar[resolution] = buffer;
+      await avatar.save();
+
+      response = buffer;
+    }
+
     res.set('Content-Type', 'image/png');
-    return res.send(user.avatar);
+    return res.send(response);
   } catch (error) {
     return next(error);
   }
