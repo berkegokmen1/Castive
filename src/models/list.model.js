@@ -1,5 +1,7 @@
 const mongoose = require('mongoose');
 
+const Image = require('./image.model');
+
 const listSchema = new mongoose.Schema(
   {
     title: {
@@ -154,6 +156,22 @@ listSchema.virtual('numFollowers', {
   localField: '_id',
   foreignField: 'library',
   count: true,
+});
+
+/******************************
+ * SCHEMA MIDDLEWARES
+ ******************************/
+
+listSchema.pre('remove', async function (next) {
+  try {
+    const list = this;
+
+    await Image.findByIdAndDelete(list.cover).exec();
+
+    next();
+  } catch (error) {
+    throw error;
+  }
 });
 
 const List = mongoose.model('List', listSchema);

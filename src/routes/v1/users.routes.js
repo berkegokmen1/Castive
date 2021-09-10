@@ -6,10 +6,12 @@ const auth = require('../../middlewares/check-auth');
 
 const router = express.Router();
 
+const FILE_SIZE = process.env.USER_AVATAR_FILESIZE || 1000000;
+
 // Multer upload
 const upload = multer({
   limits: {
-    fileSize: 1000000,
+    fileSize: parseInt(FILE_SIZE),
   },
   fileFilter(req, file, cb) {
     if (!file.originalname.match(/\.(jpg|jpeg|png)$/)) {
@@ -28,7 +30,7 @@ const {
   putMeAvatar,
   deleteMeAvatar,
   getMeInterests,
-  postMeInterests,
+  putMeInterests,
   deleteMeInterests,
   patchMe,
   deleteMe,
@@ -51,7 +53,7 @@ router.delete('/me/avatar', auth, deleteMeAvatar);
 
 router.get('/me/interests', auth, getMeInterests);
 
-router.post('/me/interests/:type/:incexc', auth, postMeInterests); // /me/inserests/tv/include or /me/inserests/movie/exclude
+router.put('/me/interests/:type/:incexc', auth, putMeInterests); // /me/inserests/tv/include or /me/inserests/movie/exclude
 
 router.delete('/me/interests/:type/:incexc', auth, deleteMeInterests); // /me/inserests/tv/include or /me/inserests/movie/exclude
 

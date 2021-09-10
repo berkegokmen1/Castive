@@ -22,10 +22,12 @@ const {
 
 const router = express.Router();
 
+const FILE_SIZE = process.env.LIST_COVER_FILESIZE || 1000000;
+
 // Multer upload
 const upload = multer({
   limits: {
-    fileSize: 1000000,
+    fileSize: parseInt(FILE_SIZE),
   },
   fileFilter(req, file, cb) {
     if (!file.originalname.match(/\.(jpg|jpeg|png)$/)) {

@@ -225,7 +225,7 @@ const getMeAvatar = async (req, res, next) => {
           .toBuffer();
       }
 
-      const avatar = await Image.findById(req.user.avatar._id);
+      const avatar = await Image.findById(req.user.avatar._id).exec();
       avatar[resolution] = buffer;
       await avatar.save();
 
@@ -246,7 +246,7 @@ const putMeAvatar = async (req, res, next) => {
     }
 
     if (req.user.avatar) {
-      await Image.findByIdAndRemove(req.user.avatar);
+      await Image.findByIdAndDelete(req.user.avatar).exec();
     }
 
     const buffer = await sharp(req.file.buffer)
@@ -255,6 +255,7 @@ const putMeAvatar = async (req, res, next) => {
       .toBuffer();
 
     const avatar = new Image({
+      type: 'USER',
       original: buffer,
     });
     req.user.avatar = avatar._id;
@@ -302,7 +303,7 @@ const getMeInterests = async (req, res, next) => {
   }
 };
 
-const postMeInterests = async (req, res, next) => {
+const putMeInterests = async (req, res, next) => {
   // /me/inserests/:type/:incexc
   try {
     const { type, incexc } = req.params;
@@ -940,7 +941,7 @@ module.exports = {
   putMeAvatar,
   deleteMeAvatar,
   getMeInterests,
-  postMeInterests,
+  putMeInterests,
   deleteMeInterests,
   patchMe,
   deleteMe,

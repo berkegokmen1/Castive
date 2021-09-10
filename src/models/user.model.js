@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const createError = require('http-errors');
 
 const List = require('./list.model');
+const Image = require('./image.model');
 
 const userSchema = new mongoose.Schema(
   {
@@ -42,6 +43,11 @@ const userSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Image',
       default: undefined,
+    },
+    role: {
+      type: String,
+      default: 'user',
+      enum: ['user', 'admin', 'moderator'],
     },
     following: [
       {
@@ -321,7 +327,10 @@ userSchema.pre('remove', async function (next) {
   try {
     const user = this;
 
-    await List.deleteMany({ owner: user._id }).exec();
+    await Promise.all([
+      List.deleteMany({ owner: user._id }).exec(),
+      Image.findByIdAndDelete(user.avatar).exec(),
+    ]);
 
     next();
   } catch (error) {

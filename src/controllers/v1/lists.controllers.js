@@ -233,7 +233,8 @@ const getList = async (req, res, next) => {
 
     list = await List.findById(id)
       .select('title owner description private items')
-      .populate('numFollowers');
+      .populate('numFollowers')
+      .exec();
 
     if (!list) {
       return next(createError.NotFound('List could not be found.'));
@@ -594,8 +595,7 @@ const putListCover = async (req, res, next) => {
     }
 
     if (list.cover) {
-      console.log(list.cover);
-      await Image.findByIdAndRemove(list.cover);
+      await Image.findByIdAndDelete(list.cover).exec();
     }
 
     const buffer = await sharp(req.file.buffer)
@@ -604,6 +604,7 @@ const putListCover = async (req, res, next) => {
       .toBuffer();
 
     const cover = new Image({
+      type: 'LIST',
       original: buffer,
     });
     list.cover = cover._id;
@@ -649,7 +650,7 @@ const deleteListCover = async (req, res, next) => {
 
     list.cover = undefined;
 
-    await Promise.all([Image.findByIdAndRemove(imageId), list.save()]);
+    await Promise.all([Image.findByIdAndRemove(imageId).exec(), list.save()]);
 
     return res.json({
       success: true,
