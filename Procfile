@@ -1,1 +1,1 @@
-web: node src/app.js
+web: npm i && node src/app.js
