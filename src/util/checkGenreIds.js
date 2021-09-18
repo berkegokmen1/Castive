@@ -5,65 +5,76 @@ const client = require('../db/redis.db');
 const TMDB_API_KEY = process.env.TMDB_API_KEY;
 
 const checkGenreIdsFormat = (ids) => {
-	if (!Array.isArray(ids)) {
-		return false;
-	}
+  if (!Array.isArray(ids)) {
+    return false;
+  }
 
-	if (!ids.every((id) => typeof id === 'number')) {
-		return false;
-	}
+  if (!ids.every((id) => typeof id === 'number')) {
+    return false;
+  }
 
-	if (!ids.every((id) => Number.isInteger(id))) {
-		return false;
-	}
+  if (!ids.every((id) => Number.isInteger(id))) {
+    return false;
+  }
 
-	return true;
+  return true;
 };
 
 const checkGenreIdsCache = async (ids, type) => {
-	// Use axios to make request to tmdb api, retrieve genres
-	// Store genres in redis db with 24 hours of expiration
-	// Compare the ids to the values that came from tmdb
+  // Use axios to make request to tmdb api, retrieve genres
+  // Store genres in redis db with 24 hours of expiration
+  // Compare the ids to the values that came from tmdb
 
-	try {
-		return new Promise((resolve, reject) => {
-			client.get(`TMDB_GENRES:${type}`, async (err, reply) => {
-				if (err) {
-					return reject(createError.InternalServerError());
-				}
+  try {
+    return new Promise((resolve, reject) => {
+      client.get(`TMDB_GENRES:${type}`, async (err, reply) => {
+        if (err) {
+          return reject(createError.InternalServerError());
+        }
 
-				if (!reply) {
-					// Not cached, make request and cache
-					const response = await axios.get(
-						`https://api.themoviedb.org/3/genre/${type}/list?api_key=${TMDB_API_KEY}&language=en-US`
-					);
-					const idList = response.data.genres.map((genre) => genre.id);
+        if (!reply) {
+          // Not cached, make request and cache
+          let response;
 
-					// Store idList in redis
-					// Not interested in errors and reply from saving
-					client.set(
-						`TMDB_GENRES:${type}`,
-						JSON.stringify(idList),
-						'EX',
-						86400
-					);
+          try {
+            response = await axios.get(
+              `https://api.themoviedb.org/3/genre/${type}/list?api_key=${TMDB_API_KEY}&language=en-US`
+            );
+          } catch (error) {}
 
-					const check = ids.every((id) => idList.includes(id));
+          if (!response) {
+            return reject(
+              createError.InternalServerError('Unable to reach tmdb.')
+            );
+          }
 
-					return resolve(check);
-				} else {
-					// Cache is present
-					const idList = await JSON.parse(reply);
+          const idList = response.data.genres.map((genre) => genre.id);
 
-					const check = ids.every((id) => idList.includes(id));
+          // Store idList in redis
+          // Not interested in errors and reply from saving
+          client.set(
+            `TMDB_GENRES:${type}`,
+            JSON.stringify(idList),
+            'EX',
+            86400
+          );
 
-					return resolve(check);
-				}
-			});
-		});
-	} catch (error) {
-		throw error;
-	}
+          const check = ids.every((id) => idList.includes(id));
+
+          return resolve(check);
+        } else {
+          // Cache is present
+          const idList = await JSON.parse(reply);
+
+          const check = ids.every((id) => idList.includes(id));
+
+          return resolve(check);
+        }
+      });
+    });
+  } catch (error) {
+    return reject(error);
+  }
 };
 
 module.exports = { checkGenreIdsFormat, checkGenreIdsCache };
